@@ -8,16 +8,16 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { ARMeasureView, type ARCallbacks, type ReticleHit, type TrackingCause } from '../../ar/ARMeasureView';
-import { addMeasurement, saveCorners, setHeight } from '../../db/repo';
+import { addMeasurement, saveCorners, setCalibration, setHeight } from '../../db/repo';
 import {
-  combineReliability, computeReliability, distance3, heightBetween, isHeightInRange, MAX_CORNERS,
+  calibrationFactor, combineReliability, computeReliability, formatLength, isFactorAcceptable, K_MAX, K_MIN, distance3, heightBetween, isHeightInRange, MAX_CORNERS,
   MIN_POINT_SEPARATION_M, parseDecimal, toFloor, validateContour, type Point3, type Reliability, type TrackingState,
 } from '../../lib';
 import { useAppState } from '../../state/AppState';
 import { Button, ReliabilityChip, ValueWithRange, s } from '../../components/ui';
 import { colors, space } from '../../theme';
 
-type Mode = 'distance' | 'room' | 'height';
+type Mode = 'distance' | 'room' | 'height' | 'reference';
 interface Placed { p: Point3; rel: Reliability }
 
 const TRACK_LABEL: Record<TrackingState, string> = { good: 'Bueno', limited: 'Limitado', lost: 'Perdido' };
@@ -36,7 +36,8 @@ const CONTOUR_MSG: Record<string, string> = {
 };
 
 export default function Scan() {
-  const { id, mode: initialMode } = useLocalSearchParams<{ id: string; mode?: Mode }>();
+  const { id, mode: initialMode, realM: realParam } = useLocalSearchParams<{ id: string; mode?: Mode; realM?: string }>();
+  const realM = realParam ? Number(realParam) : null;
   const db = useSQLiteContext();
   const { compat, settings } = useAppState();
   const [mode, setMode] = useState<Mode>(initialMode ?? 'distance');
@@ -97,6 +98,31 @@ export default function Scan() {
         setLastResult({ valueM: d, score: r.score });
       }
       setPoints(next);
+    } else if (mode === 'reference') {
+      // RF-12: calibración con objeto de referencia
+      const next = points.length >= 2 ? [placed] : [...points, placed];
+      if (next.length === 2 && realM) {
+        const measured = distance3(next[0].p, next[1].p);
+        if (measured < MIN_POINT_SEPARATION_M) return setMessage('Los puntos están a menos de 1 cm; se descartó el segundo.');
+        const k = calibrationFactor(realM, measured);
+        const r = combineReliability([next[0].rel, next[1].rel]);
+        await addMeasurement(db, id, { kind: 'referencia', valueM: measured, a: next[0].p, b: next[1].p, confidence: r.score, factors: { ...r.factors, realM, k } });
+        const errPct = (Math.abs(measured - realM) / realM) * 100;
+        const fmt = (n: number, d: number) => n.toFixed(d).replace('.', ',');
+        if (!isFactorAcceptable(k)) {
+          Alert.alert('Medición de referencia dudosa',
+            `Se midieron ${formatLength(measured, 'cm', 3)} frente a ${formatLength(realM, 'cm', 3)} reales (k = ${fmt(k, 3)}, fuera de ${fmt(K_MIN, 2)}–${fmt(K_MAX, 2)}). Probablemente la medición falló: repítela.`,
+            [{ text: 'Repetir', onPress: () => setPoints([]) }]);
+        } else {
+          Alert.alert('Factor de calibración',
+            `Medido: ${formatLength(measured, 'cm', 3)} · Real: ${formatLength(realM, 'cm', 3)}\nError sin calibrar: ${fmt(errPct, 1)} %\nk = ${fmt(k, 3)}\n\n¿Aplicarlo a todo el proyecto?`,
+            [
+              { text: 'Repetir', style: 'cancel', onPress: () => setPoints([]) },
+              { text: 'Aplicar', onPress: async () => { await setCalibration(db, id, k); router.replace(`/project/${id}`); } },
+            ]);
+        }
+      }
+      setPoints(next);
     } else if (mode === 'room') {
       if (points.length >= MAX_CORNERS) return setMessage('Máximo 12 esquinas. Cierra el contorno.');
       setPoints([...points, placed]);
@@ -151,7 +177,8 @@ export default function Scan() {
 
   const liveRel = reticle ? computeReliability({ tracking: tracking.state, surface: reticle.surface, cameraDistanceM: reticle.cameraDistanceM }) : null;
   const instruction =
-    mode === 'distance' ? (points.length === 1 ? 'Apunta al punto B y toca «Marcar»' : 'Apunta al punto A y toca «Marcar»')
+    mode === 'reference' ? (points.length === 1 ? 'Marca el otro extremo de la referencia' : 'Marca un extremo del objeto de referencia')
+      : mode === 'distance' ? (points.length === 1 ? 'Apunta al punto B y toca «Marcar»' : 'Apunta al punto A y toca «Marcar»')
       : mode === 'room' ? `Marca la esquina ${points.length + 1} (pared con piso)`
         : points.length === 0 ? 'Apunta al piso y toca «Marcar»' : 'Ahora apunta al techo, en la misma vertical';
 
@@ -184,7 +211,8 @@ export default function Scan() {
 
         <View style={{ gap: space.sm, backgroundColor: 'rgba(11,11,12,0.88)', borderRadius: 16, padding: space.md }}>
           <View style={[s.row]}>
-            {(['distance', 'room', 'height'] as Mode[]).map((m) => (
+            {mode === 'reference' && <Text style={[s.h2, { flex: 1 }]}>Calibración · referencia {realM ? formatLength(realM, 'cm', 3) : ''}</Text>}
+            {mode !== 'reference' && (['distance', 'room', 'height'] as Mode[]).map((m) => (
               <Button key={m} label={m === 'distance' ? 'Distancia' : m === 'room' ? 'Habitación' : 'Altura'}
                 variant={m === mode ? 'primary' : 'secondary'} style={{ flex: 1 }}
                 onPress={() => { setMode(m); setPoints([]); setLastResult(null); setMessage(null); }} />

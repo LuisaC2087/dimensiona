@@ -53,7 +53,15 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "microphonePermission": false,
+          "cameraPermission": "DIMENSIONA usa la cámara para medir y tomar fotos de tus proyectos.",
+          "photosPermission": "DIMENSIONA usa tus fotos solo para adjuntarlas a tus proyectos."
+        }
+      ]
     ],
     "scheme": "dimensiona",
     "backgroundColor": "#0B0B0C",

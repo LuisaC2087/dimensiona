@@ -4,7 +4,7 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import {
-  deleteMeasurement, deleteProject, getCorners, getProject, listMeasurements,
+  deleteMeasurement, deleteProject, getCorners, getProject, listMeasurements, setCalibration,
   type Corner, type Measurement, type Project,
 } from '../../db/repo';
 import {
@@ -13,10 +13,13 @@ import {
 import { useAppState } from '../../state/AppState';
 import { useCloud } from '../../state/CloudState';
 import { Plan2D } from '../../components/Plan2D';
+import { Model3D } from '../../components/Model3D';
+import { PhotoGallery } from '../../components/PhotoGallery';
+import { deleteFiles } from '../../photos/photos';
 import { Button, Card, Disclaimer, ReliabilityChip, ValueWithRange, s } from '../../components/ui';
 import { colors, space } from '../../theme';
 
-type Tab = 'plano' | 'datos';
+type Tab = 'plano' | '3d' | 'datos';
 
 export default function ProjectScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -53,7 +56,7 @@ export default function ProjectScreen() {
   const confirmDelete = () =>
     Alert.alert('Eliminar proyecto', `Se borrarán «${project.name}», sus mediciones, fotos y notas.`, [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: async () => { await deleteProject(db, id); router.back(); } },
+      { text: 'Eliminar', style: 'destructive', onPress: async () => { deleteFiles(await deleteProject(db, id)); router.back(); } },
     ]);
 
   const scan = (mode: string) => (compat?.canScan ? router.push(`/scan/${id}?mode=${mode}`) : router.push('/compat'));
@@ -62,8 +65,8 @@ export default function ProjectScreen() {
     <ScrollView style={s.screen} contentContainerStyle={s.pad}>
       <Stack.Screen options={{ title: project.name }} />
       <View style={s.row}>
-        {(['plano', 'datos'] as Tab[]).map((t) => (
-          <Button key={t} label={t === 'plano' ? 'Plano' : 'Datos'} variant={t === tab ? 'primary' : 'secondary'} style={{ flex: 1 }} onPress={() => setTab(t)} />
+        {(['plano', '3d', 'datos'] as Tab[]).map((t) => (
+          <Button key={t} label={t === 'plano' ? 'Plano' : t === '3d' ? '3D' : 'Datos'} variant={t === tab ? 'primary' : 'secondary'} style={{ flex: 1 }} onPress={() => setTab(t)} />
         ))}
       </View>
 
@@ -73,6 +76,20 @@ export default function ProjectScreen() {
         <Card style={{ borderLeftColor: colors.textMuted }}>
           <Text style={s.body}>Aún no hay contorno; marca las esquinas.</Text>
         </Card>
+      ))}
+
+      {tab === '3d' && (metrics && project.heightM != null ? (
+        <Model3D corners={corners} heightM={project.heightM * project.k} unit={unit} decimals={decimals} />
+      ) : metrics ? (
+        <View style={{ gap: space.sm }}>
+          <Plan2D corners={corners} walls={metrics.walls} areaM2={metrics.floorArea} unit={unit} decimals={decimals} />
+          <Card style={{ borderLeftColor: colors.warn }}>
+            <Text style={s.body}>Falta la altura para ver el modelo 3D. Regístrala para completarlo.</Text>
+            <Button label="Marcar altura" variant="secondary" onPress={() => scan('height')} />
+          </Card>
+        </View>
+      ) : (
+        <Card style={{ borderLeftColor: colors.textMuted }}><Text style={s.body}>Aún no hay contorno; marca las esquinas.</Text></Card>
       ))}
 
       {metrics && contourConf != null && (
@@ -145,6 +162,22 @@ export default function ProjectScreen() {
           ))}
         </View>
       )}
+
+      {tab === 'datos' && (
+        <Card>
+          <View style={s.row}>
+            <Text style={s.h2}>Calibración</Text>
+            <Text style={s.body}>k = {project.k.toFixed(3).replace('.', ',')}</Text>
+          </View>
+          <Text style={s.muted}>{project.k === 1 ? 'Sin calibrar. Calibra con un objeto de medida conocida para corregir la escala.' : 'Todas las medidas del proyecto están corregidas con este factor.'}</Text>
+          <View style={s.row}>
+            <Button label="Calibrar" variant="secondary" style={{ flex: 1 }} onPress={() => router.push(`/calibrate/${id}`)} />
+            {project.k !== 1 && <Button label="Quitar" variant="secondary" onPress={async () => { await setCalibration(db, id, 1); load(); }} />}
+          </View>
+        </Card>
+      )}
+
+      {tab === 'datos' && <PhotoGallery projectId={id} />}
 
       <View style={{ gap: space.sm }}>
         <Button label={corners.length ? 'Volver a marcar esquinas' : 'Marcar esquinas'} onPress={() => scan('room')} />
