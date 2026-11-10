@@ -28,10 +28,13 @@ export interface ReticleHit {
   cameraPosition: Point3;
 }
 
+/** Plano detectado por ARCore: «floor» = horizontal hacia arriba, «ceiling» = hacia abajo. y = altura del plano (m). */
+export interface DetectedPlane { id: string; kind: 'floor' | 'ceiling' | 'wall'; y: number }
+
 export interface ARCallbacks {
   onTracking: (state: TrackingState, cause: TrackingCause) => void;
   onReticle: (hit: ReticleHit | null) => void;
-  onPlane: (id: string, orientation: 'horizontal' | 'vertical') => void;
+  onPlane: (plane: DetectedPlane) => void;
 }
 
 export interface ARDrawing {
@@ -79,17 +82,20 @@ function MeasureScene(props: { arSceneNavigator: { viroAppProps: AppProps } }) {
     });
   };
 
+  // Altas y actualizaciones de planos: ARCore refina su posición con el tiempo.
   const onAnchor = (a: ViroAnchor) => {
     if (a.type !== 'plane' || !a.alignment) return;
-    cb.current.onPlane(a.anchorId, a.alignment === 'Vertical' ? 'vertical' : 'horizontal');
+    const kind = a.alignment === 'Vertical' ? 'wall' : a.alignment === 'HorizontalDownward' ? 'ceiling' : 'floor';
+    cb.current.onPlane({ id: a.anchorId, kind, y: a.position[1] + (a.center?.[1] ?? 0) });
   };
 
   return (
     <ViroARScene
-      anchorDetectionTypes={['PlanesHorizontal', 'PlanesVertical']}
+      anchorDetectionTypes={['planesHorizontal', 'planesVertical']}
       onTrackingUpdated={(s, r) => cb.current.onTracking(mapTracking(s), mapCause(r))}
       onCameraARHitTest={onHit}
       onAnchorFound={onAnchor}
+      onAnchorUpdated={onAnchor}
     >
       {drawing.points.map((p, i) => <ViroSphere key={`p${i}`} position={v(p)} radius={0.015} materials={['dimPoint']} />)}
       {drawing.segments.map(([a, b], i) => <ViroPolyline key={`s${i}`} points={[v(a), v(b)]} thickness={0.006} materials={['dimLine']} />)}

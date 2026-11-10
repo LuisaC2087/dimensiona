@@ -77,3 +77,22 @@ Inicio/Proyectos · Tutorial · Escaneo y medición (AR) · Habitación guiada �
 ## Pruebas nuevas
 - **PR-14** Cuenta: registro, confirmación, inicio de sesión en un 2.º dispositivo y recuperación de proyectos.
 - **PR-15** Offline → online: modo avión, crear/editar/borrar, reconectar; verificar en el panel de Supabase.
+
+---
+
+# Control de cambios — CR-02: medición automática de la habitación y 3D tipo mapa
+
+**Estado:** propuesto por la desarrolladora · **pendiente de validación del cliente (docente)**.
+**Motivo:** en la prueba en dispositivo, marcar las esquinas a mano resultó impreciso y poco práctico; se pide que la app detecte la habitación sola.
+
+| ID | Antes | Ahora |
+|---|---|---|
+| RF-05 | La persona marca las esquinas tocando (3–12). | **Automático:** la persona recorre las paredes con la retícula; la app muestrea puntos 3D, detecta las paredes (RANSAC sobre los puntos entre piso y techo, proyectados al plano horizontal), y calcula las esquinas como intersección de paredes consecutivas. Vista previa en vivo (contorno sobre la cámara, área, nº de paredes, % de ajuste). **Respaldo manual** («Marcar esquinas a mano») si una pared no se detecta o la habitación no es convexa. |
+| RF-06 | Toque en piso y techo. | **Automático:** altura = altura del plano de techo (horizontal hacia abajo) − altura del plano de piso (horizontal hacia arriba más bajo). Respaldo: toques o valor manual. |
+| RF-09 | Confiabilidad por punto. | Para el contorno automático: S calculada con el promedio de seguimiento, la fracción de muestras sobre planos y la distancia media, multiplicada por el ajuste (muestras explicadas por las paredes / 0,8, máx. 1). |
+| RF-11 | Prisma extruido simple. | Modelo 3D tipo mapa: cámara en perspectiva orbital (girar, inclinar, acercar), paredes con grosor y sombreado por luz, piso con cuadrícula de 50 cm, paredes delanteras translúcidas, cotas de paredes, área y altura. El plano 2D se mantiene en su pestaña. |
+| 2.4 Alcance | Polígonos ≤ 12 vértices. | El modo automático admite habitaciones **convexas** de 3–12 paredes; las no convexas (en L) usan el respaldo manual. |
+
+**Corrección asociada:** la detección de planos no se activaba (tipos de detección enviados a ViroReact con mayúscula: `PlanesHorizontal` → `planesHorizontal`). La interfaz del escaneo ahora se actualiza a 10 Hz para no saturar el teléfono.
+
+**Verificación:** pruebas unitarias con recorridos simulados (ruido 1 cm): sala 4,20 × 3,60 → esquinas a ≤ 3 cm, área y perímetro con error < 2 %; habitación girada 30°; trapecio de 5 paredes. Prueba en dispositivo: PR-02 con el modo automático.

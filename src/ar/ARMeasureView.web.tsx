@@ -5,10 +5,13 @@ import { colors } from '../theme';
 
 export type TrackingCause = 'none' | 'motion' | 'features' | 'light';
 export interface ReticleHit { position: Point3; surface: SurfaceKind; cameraDistanceM: number; cameraPosition: Point3 }
+/** Plano detectado por ARCore: «floor» = horizontal hacia arriba, «ceiling» = hacia abajo. y = altura del plano (m). */
+export interface DetectedPlane { id: string; kind: 'floor' | 'ceiling' | 'wall'; y: number }
+
 export interface ARCallbacks {
   onTracking: (state: TrackingState, cause: TrackingCause) => void;
   onReticle: (hit: ReticleHit | null) => void;
-  onPlane: (id: string, orientation: 'horizontal' | 'vertical') => void;
+  onPlane: (plane: DetectedPlane) => void;
 }
 export interface ARDrawing { points: Point3[]; segments: [Point3, Point3][]; draft: Point3 | null }
 

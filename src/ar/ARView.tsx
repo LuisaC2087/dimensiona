@@ -6,7 +6,7 @@ import { NativeModules, Platform, Text, View } from 'react-native';
 import type { ARCallbacks, ARDrawing } from './ARMeasureView';
 import { colors } from '../theme';
 
-export type { ARCallbacks, ARDrawing, ReticleHit, TrackingCause } from './ARMeasureView';
+export type { ARCallbacks, ARDrawing, DetectedPlane, ReticleHit, TrackingCause } from './ARMeasureView';
 
 type Props = { callbacks: ARCallbacks; drawing: ARDrawing; resetSignal: number };
 

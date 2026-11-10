@@ -180,7 +180,7 @@ export default function ProjectScreen() {
       {tab === 'datos' && <PhotoGallery projectId={id} />}
 
       <View style={{ gap: space.sm }}>
-        <Button label={corners.length ? 'Volver a marcar esquinas' : 'Marcar esquinas'} onPress={() => scan('room')} />
+        <Button label={corners.length ? 'Volver a escanear la habitación' : 'Escanear habitación'} onPress={() => scan('room')} />
         <Button label="Medir distancia" variant="secondary" onPress={() => scan('distance')} />
         {!project.isDemo && <Button label="Eliminar proyecto" variant="danger" onPress={confirmDelete} />}
       </View>

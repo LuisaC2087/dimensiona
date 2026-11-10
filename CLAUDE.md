@@ -35,7 +35,7 @@ Antes de declarar una tarea terminada: `npm test` y `npx tsc --noEmit` en verde.
 ## Fases (Apéndice A) — estado
 1. Preparación (RF-01, Viro, punto 3D) — código listo; **pendiente probar en dispositivo**
 2. Medición (RF-02..04) — código listo (pantalla scan/[id]); pendiente dispositivo
-3. Geometría (RF-05..08) — lógica + plano 2D listos
+3. Geometría (RF-05..08) — contorno y altura AUTOMÁTICOS (CR-02, src/lib/roomDetect.ts) con respaldo manual; plano 2D
 4. Datos y confiabilidad (RF-09, RF-10) — SQLite, autoguardado, chips listos
 5. Precisión (PR-01..03, ajustar umbrales) — pendiente
 6. Mejoras Media (RF-11..15) — código listo (3D SVG, calibración, incertidumbre, fotos y notas, unidades); pendiente probar en dispositivo
