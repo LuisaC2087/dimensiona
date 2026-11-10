@@ -47,6 +47,20 @@ create table if not exists public.medicion (
   sync_at timestamptz not null default now()
 );
 
+-- Notas (RF-14, CR-01): se sincronizan aunque las fotos no. foto_id es referencia débil (la foto vive en el teléfono).
+create table if not exists public.nota (
+  id uuid primary key,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  proyecto_id uuid not null references public.proyecto(id) on delete cascade,
+  foto_id uuid,
+  texto text not null check (char_length(texto) between 1 and 500),
+  creado timestamptz not null,
+  modificado timestamptz not null,
+  borrado boolean not null default false,
+  sync_at timestamptz not null default now()
+);
+
+create index if not exists nota_user_sync on public.nota (user_id, sync_at);
 create index if not exists proyecto_user_sync on public.proyecto (user_id, sync_at);
 create index if not exists esquina_user_sync on public.esquina (user_id, sync_at);
 create index if not exists medicion_user_sync on public.medicion (user_id, sync_at);
@@ -62,7 +76,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['proyecto','esquina','medicion'] loop
+  foreach t in array array['proyecto','esquina','medicion','nota'] loop
     execute format('drop trigger if exists %I_sync_at on public.%I', t, t);
     execute format('create trigger %I_sync_at before insert or update on public.%I for each row execute function public.set_sync_at()', t, t);
     execute format('alter table public.%I enable row level security', t);
@@ -84,6 +98,7 @@ begin
   if uid is null then
     raise exception 'not authenticated';
   end if;
+  delete from public.nota where user_id = uid;
   delete from public.medicion where user_id = uid;
   delete from public.esquina where user_id = uid;
   delete from public.proyecto where user_id = uid;

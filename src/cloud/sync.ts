@@ -2,14 +2,14 @@
  * RF-18: sincronización bidireccional SQLite ⇄ Supabase.
  * 1) Subir: proyectos, esquinas y mediciones pendientes (no demo) y los borrados.
  * 2) Bajar: filas con sync_at > cursor, resueltas con resolveRemote (la nube es la base principal).
- * Las fotos no se suben (solo datos).
+ * Las fotos no se suben (solo datos); sus notas sí (tabla nota).
  */
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { resolveRemote } from '../lib/syncRules';
 
 const PAGE = 500;
-type Table = 'proyecto' | 'esquina' | 'medicion';
+type Table = 'proyecto' | 'esquina' | 'medicion' | 'nota';
 
 const cursorKey = (userId: string) => `cursor:${userId}`;
 
@@ -63,8 +63,17 @@ async function push(db: SQLiteDatabase, sb: SupabaseClient, userId: string) {
     for (const m of meas) await db.runAsync('UPDATE medicion SET pendiente = 0 WHERE id = ? AND modificado = ?', m.id, m.modificado);
   }
 
+  const notes = await db.getAllAsync<any>(`SELECT * FROM nota WHERE pendiente = 1 AND ${owned}`, userId);
+  if (notes.length) {
+    check(await sb.from('nota').upsert(notes.map((n) => ({
+      id: n.id, proyecto_id: n.proyecto_id, foto_id: n.foto_id, texto: n.texto,
+      creado: n.creado, modificado: n.modificado, borrado: false,
+    }))));
+    for (const n of notes) await db.runAsync('UPDATE nota SET pendiente = 0 WHERE id = ? AND modificado = ?', n.id, n.modificado);
+  }
+
   const dels = await db.getAllAsync<{ tabla: Table; id: string; fecha: string }>('SELECT * FROM eliminado');
-  for (const t of ['medicion', 'esquina', 'proyecto'] as Table[]) {
+  for (const t of ['nota', 'medicion', 'esquina', 'proyecto'] as Table[]) {
     const items = dels.filter((d) => d.tabla === t);
     if (!items.length) continue;
     const ids = items.map((d) => d.id);
@@ -73,6 +82,7 @@ async function push(db: SQLiteDatabase, sb: SupabaseClient, userId: string) {
     if (t === 'proyecto') {
       check(await sb.from('esquina').update({ borrado: true, modificado: fecha }).in('proyecto_id', ids));
       check(await sb.from('medicion').update({ borrado: true, modificado: fecha }).in('proyecto_id', ids));
+      check(await sb.from('nota').update({ borrado: true, modificado: fecha }).in('proyecto_id', ids));
     }
     for (const id of ids) await db.runAsync('DELETE FROM eliminado WHERE tabla = ? AND id = ?', t, id);
   }
@@ -141,6 +151,17 @@ async function pull(db: SQLiteDatabase, sb: SupabaseClient, userId: string) {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         m.id, m.proyecto_id, m.tipo, m.valor_m, m.a_x, m.a_y, m.a_z, m.b_x, m.b_y, m.b_z,
         m.confiabilidad, m.nivel, JSON.stringify(m.factores ?? {}), iso(m.creado), iso(m.modificado));
+    }
+  }
+
+  for (const n of await fetchSince(sb, 'nota', since)) {
+    track(n);
+    const action = resolveRemote(await localState(db, 'nota', n.id), { modified: iso(n.modificado), deleted: n.borrado });
+    if (action === 'deleteLocal') await db.runAsync('DELETE FROM nota WHERE id = ?', n.id);
+    if (action === 'apply' && (await projectExists(n.proyecto_id))) {
+      await db.runAsync(
+        `INSERT OR REPLACE INTO nota (id, proyecto_id, foto_id, texto, creado, modificado, pendiente) VALUES (?, ?, ?, ?, ?, ?, 0)`,
+        n.id, n.proyecto_id, n.foto_id, n.texto, iso(n.creado), iso(n.modificado));
     }
   }
 

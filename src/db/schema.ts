@@ -52,8 +52,18 @@ CREATE TABLE IF NOT EXISTS foto (
   proyecto_id TEXT NOT NULL REFERENCES proyecto(id) ON DELETE CASCADE,
   medicion_id TEXT REFERENCES medicion(id) ON DELETE SET NULL,
   ruta TEXT NOT NULL,
-  nota TEXT CHECK (nota IS NULL OR length(nota) <= 500),
   fecha TEXT NOT NULL
+);
+-- Notas separadas de las fotos para poder sincronizarlas (las fotos no salen del teléfono).
+-- foto_id es una referencia débil: en otro dispositivo la foto puede no existir.
+CREATE TABLE IF NOT EXISTS nota (
+  id TEXT PRIMARY KEY NOT NULL,
+  proyecto_id TEXT NOT NULL REFERENCES proyecto(id) ON DELETE CASCADE,
+  foto_id TEXT,
+  texto TEXT NOT NULL CHECK (length(texto) BETWEEN 1 AND 500),
+  creado TEXT NOT NULL,
+  modificado TEXT NOT NULL,
+  pendiente INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS ajustes (
   id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -75,5 +85,6 @@ CREATE TABLE IF NOT EXISTS sync_meta (
 CREATE INDEX IF NOT EXISTS idx_esquina_proy ON esquina(proyecto_id, orden);
 CREATE INDEX IF NOT EXISTS idx_medicion_proy ON medicion(proyecto_id);
 CREATE INDEX IF NOT EXISTS idx_foto_proy ON foto(proyecto_id);
+CREATE INDEX IF NOT EXISTS idx_nota_proy ON nota(proyecto_id);
 PRAGMA user_version = ${SCHEMA_VERSION};
 `;

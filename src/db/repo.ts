@@ -232,6 +232,7 @@ export async function countPending(db: SQLiteDatabase): Promise<number> {
     SELECT (SELECT COUNT(*) FROM proyecto WHERE pendiente = 1 AND es_demo = 0)
          + (SELECT COUNT(*) FROM esquina WHERE pendiente = 1 AND proyecto_id IN (SELECT id FROM proyecto WHERE es_demo = 0))
          + (SELECT COUNT(*) FROM medicion WHERE pendiente = 1 AND proyecto_id IN (SELECT id FROM proyecto WHERE es_demo = 0))
+         + (SELECT COUNT(*) FROM nota WHERE pendiente = 1 AND proyecto_id IN (SELECT id FROM proyecto WHERE es_demo = 0))
          + (SELECT COUNT(*) FROM eliminado) AS n`);
   return r?.n ?? 0;
 }

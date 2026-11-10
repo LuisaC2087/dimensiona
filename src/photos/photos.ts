@@ -1,15 +1,14 @@
 /**
- * RF-14: fotos (JPEG en el almacenamiento privado de la app) y notas ≤ 500 caracteres.
+ * RF-14: fotos (JPEG en el almacenamiento privado de la app). Las notas viven en src/db/notes.ts.
  * Las fotos nunca se suben a la nube (CR-01).
  * expo-image-picker se carga bajo demanda: si el APK instalado no lo trae, se avisa en vez de cerrarse.
  */
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { Directory, File, Paths } from 'expo-file-system';
 import { newId, now } from '../db/repo';
+import { deleteNotesOfPhoto } from '../db/notes';
 
-export const NOTE_MAX = 500;
-
-export interface Photo { id: string; uri: string; note: string | null; measurementId: string | null; date: string }
+export interface Photo { id: string; uri: string; measurementId: string | null; date: string }
 
 function photosDir(): Directory {
   const d = new Directory(Paths.document, 'fotos');
@@ -39,8 +38,8 @@ export async function addPhoto(db: SQLiteDatabase, projectId: string, source: 'c
     if (Paths.availableDiskSpace < 5 * 1024 * 1024) return { ok: false, reason: 'storage' };
     const dest = new File(photosDir(), `${id}.jpg`);
     new File(res.assets[0].uri).copy(dest);
-    const photo: Photo = { id, uri: dest.uri, note: null, measurementId: measurementId ?? null, date: now() };
-    await db.runAsync('INSERT INTO foto (id, proyecto_id, medicion_id, ruta, nota, fecha) VALUES (?, ?, ?, ?, NULL, ?)',
+    const photo: Photo = { id, uri: dest.uri, measurementId: measurementId ?? null, date: now() };
+    await db.runAsync('INSERT INTO foto (id, proyecto_id, medicion_id, ruta, fecha) VALUES (?, ?, ?, ?, ?)',
       id, projectId, photo.measurementId, photo.uri, photo.date);
     return { ok: true, photo };
   } catch {
@@ -49,14 +48,9 @@ export async function addPhoto(db: SQLiteDatabase, projectId: string, source: 'c
 }
 
 export async function listPhotos(db: SQLiteDatabase, projectId: string): Promise<Photo[]> {
-  const rows = await db.getAllAsync<{ id: string; ruta: string; nota: string | null; medicion_id: string | null; fecha: string }>(
+  const rows = await db.getAllAsync<{ id: string; ruta: string; medicion_id: string | null; fecha: string }>(
     'SELECT * FROM foto WHERE proyecto_id = ? ORDER BY fecha DESC', projectId);
-  return rows.map((r) => ({ id: r.id, uri: r.ruta, note: r.nota, measurementId: r.medicion_id, date: r.fecha }));
-}
-
-export async function setPhotoNote(db: SQLiteDatabase, id: string, note: string): Promise<void> {
-  const clean = note.trim().slice(0, NOTE_MAX);
-  await db.runAsync('UPDATE foto SET nota = ? WHERE id = ?', clean || null, id);
+  return rows.map((r) => ({ id: r.id, uri: r.ruta, measurementId: r.medicion_id, date: r.fecha }));
 }
 
 export function deleteFiles(uris: string[]): void {
@@ -72,6 +66,7 @@ export function deleteFiles(uris: string[]): void {
 
 export async function deletePhoto(db: SQLiteDatabase, id: string): Promise<void> {
   const r = await db.getFirstAsync<{ ruta: string }>('SELECT ruta FROM foto WHERE id = ?', id);
+  await deleteNotesOfPhoto(db, id);
   await db.runAsync('DELETE FROM foto WHERE id = ?', id);
   if (r) deleteFiles([r.ruta]);
 }
