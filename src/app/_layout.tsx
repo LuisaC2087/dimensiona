@@ -5,6 +5,7 @@ import { DB_NAME } from '../db/schema';
 import { migrate } from '../db/repo';
 import { ensureDemo } from '../demo/demo';
 import { AppStateProvider } from '../state/AppState';
+import { CloudStateProvider } from '../state/CloudState';
 import { colors } from '../theme';
 
 async function init(db: SQLiteDatabase) {
@@ -16,6 +17,7 @@ export default function RootLayout() {
   return (
     <SQLiteProvider databaseName={DB_NAME} onInit={init}>
       <AppStateProvider>
+      <CloudStateProvider>
         <StatusBar style="light" />
         <Stack
           screenOptions={{
@@ -32,7 +34,9 @@ export default function RootLayout() {
           <Stack.Screen name="project/[id]" options={{ title: 'Resultados' }} />
           <Stack.Screen name="scan/[id]" options={{ title: 'Escanear', headerShown: false }} />
           <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
+          <Stack.Screen name="account" options={{ title: 'Cuenta y nube' }} />
         </Stack>
+      </CloudStateProvider>
       </AppStateProvider>
     </SQLiteProvider>
   );

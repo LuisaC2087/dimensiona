@@ -11,6 +11,7 @@ import {
   formatArea, formatLength, formatVolume, levelFor, roomMetrics, uncertainty, validateContour,
 } from '../../lib';
 import { useAppState } from '../../state/AppState';
+import { useCloud } from '../../state/CloudState';
 import { Plan2D } from '../../components/Plan2D';
 import { Button, Card, Disclaimer, ReliabilityChip, ValueWithRange, s } from '../../components/ui';
 import { colors, space } from '../../theme';
@@ -21,18 +22,26 @@ export default function ProjectScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useSQLiteContext();
   const { settings, compat } = useAppState();
-  const [project, setProject] = useState<Project | null>(null);
+  const [project, setProject] = useState<Project | null | undefined>(undefined);
   const [corners, setCorners] = useState<Corner[]>([]);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [tab, setTab] = useState<Tab>('plano');
+  const { revision } = useCloud();
 
   const load = useCallback(async () => {
     const [p, c, m] = await Promise.all([getProject(db, id), getCorners(db, id), listMeasurements(db, id)]);
     setProject(p); setCorners(c); setMeasurements(m);
-  }, [db, id]);
+  }, [db, id, revision]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (!project) return <View style={s.screen} />;
+  if (project === undefined) return <View style={s.screen} />;
+  if (!project) {
+    return (
+      <View style={[s.screen, s.pad]}>
+        <Text style={s.body}>Este proyecto ya no existe (pudo eliminarse en otro dispositivo).</Text>
+      </View>
+    );
+  }
 
   const { unit, decimals } = settings;
   const validContour = corners.length >= 3 && validateContour(corners).length === 0;

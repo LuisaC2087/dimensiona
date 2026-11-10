@@ -7,15 +7,18 @@ import { listProjects, type ProjectSummary } from '../db/repo';
 import { formatArea } from '../lib';
 import { useAppState } from '../state/AppState';
 import { CompatBanner } from '../components/CompatBanner';
+import { SyncBadge } from '../components/SyncBadge';
+import { useCloud } from '../state/CloudState';
 import { Button, ReliabilityChip, s } from '../components/ui';
 import { colors, space } from '../theme';
 
 export default function Home() {
   const db = useSQLiteContext();
   const { settings } = useAppState();
+  const { revision } = useCloud();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
 
-  useFocusEffect(useCallback(() => { listProjects(db).then(setProjects); }, [db]));
+  useFocusEffect(useCallback(() => { listProjects(db).then(setProjects); }, [db, revision]));
 
   if (!settings.tutorialSeen) return <Redirect href="/tutorial" />;
 
@@ -30,6 +33,7 @@ export default function Home() {
         ListHeaderComponent={
           <View style={{ gap: space.md }}>
             <CompatBanner />
+            <SyncBadge />
             <View style={s.row}>
               <Button label="Ver demostración" variant="secondary" style={{ flex: 1 }}
                 onPress={() => demo && router.push(`/project/${demo.id}`)} />

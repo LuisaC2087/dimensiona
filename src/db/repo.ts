@@ -1,6 +1,10 @@
-/** Repositorio de proyectos (RF-10). Toda escritura es transaccional (RNF-09). */
+/**
+ * Repositorio local (RF-10). Toda escritura es transaccional (RNF-09), marca la fila como
+ * pendiente de subir y avisa a la sincronización (RF-18). Los borrados se registran en «eliminado».
+ */
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { levelFor, polygonArea, type Point2, type Point3, type ReliabilityLevel, type Unit } from '../lib';
+import { notifyLocalChange } from './changes';
 import { SCHEMA_SQL } from './schema';
 
 export const SPACE_TYPES = ['sala', 'cocina', 'dormitorio', 'oficina', 'otro'] as const;
@@ -16,6 +20,7 @@ export interface Project {
   isDemo: boolean;
   created: string;
   modified: string;
+  pending: boolean;
 }
 
 export interface ProjectSummary extends Project {
@@ -40,11 +45,16 @@ export interface Measurement {
 
 export interface Settings { unit: Unit; decimals: number; tutorialSeen: boolean }
 
+/** UUID v4 (compatible con Postgres). */
 export function newId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const h = [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16));
+  h[12] = '4';
+  h[16] = ((parseInt(h[16], 16) & 0x3) | 0x8).toString(16);
+  const s = h.join('');
+  return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`;
 }
 
-const now = () => new Date().toISOString();
+export const now = () => new Date().toISOString();
 
 export async function migrate(db: SQLiteDatabase): Promise<void> {
   await db.execAsync(SCHEMA_SQL);
@@ -52,12 +62,12 @@ export async function migrate(db: SQLiteDatabase): Promise<void> {
 
 type ProjectRow = {
   id: string; nombre: string; tipo_espacio: SpaceType; altura_m: number | null; altura_conf: number | null;
-  factor_k: number; es_demo: number; creado: string; modificado: string;
+  factor_k: number; es_demo: number; creado: string; modificado: string; pendiente: number;
 };
 
 const toProject = (r: ProjectRow): Project => ({
   id: r.id, name: r.nombre, spaceType: r.tipo_espacio, heightM: r.altura_m, heightConf: r.altura_conf,
-  k: r.factor_k, isDemo: !!r.es_demo, created: r.creado, modified: r.modificado,
+  k: r.factor_k, isDemo: !!r.es_demo, created: r.creado, modified: r.modificado, pending: !!r.pendiente,
 });
 
 /** Nombre libre: si existe, sugiere sufijo « (2)», « (3)»… */
@@ -71,15 +81,21 @@ export async function uniqueName(db: SQLiteDatabase, base: string, exceptId?: st
   }
 }
 
+/** Marca el proyecto como modificado y pendiente (tras cualquier cambio en él o sus hijos). */
+async function touch(db: Pick<SQLiteDatabase, 'runAsync'>, id: string, t = now()) {
+  await db.runAsync('UPDATE proyecto SET modificado = ?, pendiente = 1 WHERE id = ?', t, id);
+}
+
 export async function createProject(db: SQLiteDatabase, name: string, spaceType: SpaceType, isDemo = false): Promise<Project> {
   const id = newId();
   const t = now();
   const finalName = await uniqueName(db, name);
   await db.runAsync(
-    'INSERT INTO proyecto (id, nombre, tipo_espacio, factor_k, es_demo, creado, modificado) VALUES (?, ?, ?, 1.0, ?, ?, ?)',
-    id, finalName, spaceType, isDemo ? 1 : 0, t, t,
+    'INSERT INTO proyecto (id, nombre, tipo_espacio, factor_k, es_demo, creado, modificado, pendiente) VALUES (?, ?, ?, 1.0, ?, ?, ?, ?)',
+    id, finalName, spaceType, isDemo ? 1 : 0, t, t, isDemo ? 0 : 1,
   );
-  return { id, name: finalName, spaceType, heightM: null, heightConf: null, k: 1, isDemo, created: t, modified: t };
+  if (!isDemo) notifyLocalChange();
+  return { id, name: finalName, spaceType, heightM: null, heightConf: null, k: 1, isDemo, created: t, modified: t, pending: !isDemo };
 }
 
 export async function getProject(db: SQLiteDatabase, id: string): Promise<Project | null> {
@@ -95,7 +111,7 @@ export async function listProjects(db: SQLiteDatabase): Promise<ProjectSummary[]
          SELECT confiabilidad AS c FROM medicion WHERE proyecto_id = p.id
          UNION ALL SELECT confiabilidad FROM esquina WHERE proyecto_id = p.id
          UNION ALL SELECT altura_conf FROM proyecto WHERE id = p.id AND altura_conf IS NOT NULL)) AS minconf
-    FROM proyecto p ORDER BY p.modificado DESC`);
+    FROM proyecto p ORDER BY p.es_demo DESC, p.modificado DESC`);
   const out: ProjectSummary[] = [];
   for (const r of rows) {
     const corners = await getCorners(db, r.id);
@@ -109,21 +125,25 @@ export async function listProjects(db: SQLiteDatabase): Promise<ProjectSummary[]
   return out;
 }
 
-async function touch(db: SQLiteDatabase, id: string) {
-  await db.runAsync('UPDATE proyecto SET modificado = ? WHERE id = ?', now(), id);
-}
-
 export async function renameProject(db: SQLiteDatabase, id: string, name: string): Promise<string> {
   const finalName = await uniqueName(db, name, id);
-  await db.runAsync('UPDATE proyecto SET nombre = ?, modificado = ? WHERE id = ?', finalName, now(), id);
+  await db.runAsync('UPDATE proyecto SET nombre = ?, modificado = ?, pendiente = 1 WHERE id = ?', finalName, now(), id);
+  notifyLocalChange();
   return finalName;
 }
 
 /** Devuelve las rutas de fotos para que el llamador borre los archivos (RNF-10). */
 export async function deleteProject(db: SQLiteDatabase, id: string): Promise<string[]> {
   const photos = await db.getAllAsync<{ ruta: string }>('SELECT ruta FROM foto WHERE proyecto_id = ?', id);
-  await db.runAsync('DELETE FROM proyecto WHERE id = ?', id);
-  return photos.map((p) => p.ruta);
+  const p = await db.getFirstAsync<{ es_demo: number }>('SELECT es_demo FROM proyecto WHERE id = ?', id);
+  await db.withExclusiveTransactionAsync(async (tx) => {
+    if (p && !p.es_demo) {
+      await tx.runAsync('INSERT OR REPLACE INTO eliminado (tabla, id, fecha) VALUES (?, ?, ?)', 'proyecto', id, now());
+    }
+    await tx.runAsync('DELETE FROM proyecto WHERE id = ?', id);
+  });
+  notifyLocalChange();
+  return photos.map((x) => x.ruta);
 }
 
 export async function getCorners(db: SQLiteDatabase, projectId: string): Promise<Corner[]> {
@@ -132,25 +152,39 @@ export async function getCorners(db: SQLiteDatabase, projectId: string): Promise
   return rows.map((r) => ({ order: r.orden, x: r.x, z: r.z, confidence: r.confiabilidad }));
 }
 
-/** Reemplaza el contorno completo de forma atómica. */
+/** Reemplaza el contorno completo de forma atómica. Ids estables por (proyecto, orden) para sincronizar. */
 export async function saveCorners(db: SQLiteDatabase, projectId: string, corners: Omit<Corner, 'order'>[]): Promise<void> {
+  const t = now();
   await db.withExclusiveTransactionAsync(async (tx) => {
-    await tx.runAsync('DELETE FROM esquina WHERE proyecto_id = ?', projectId);
+    const old = await tx.getAllAsync<{ id: string; orden: number }>('SELECT id, orden FROM esquina WHERE proyecto_id = ?', projectId);
+    for (const o of old) {
+      if (o.orden >= corners.length) {
+        await tx.runAsync('INSERT OR REPLACE INTO eliminado (tabla, id, fecha) VALUES (?, ?, ?)', 'esquina', o.id, t);
+        await tx.runAsync('DELETE FROM esquina WHERE id = ?', o.id);
+      }
+    }
     for (let i = 0; i < corners.length; i++) {
       const c = corners[i];
-      await tx.runAsync('INSERT INTO esquina (id, proyecto_id, orden, x, z, confiabilidad) VALUES (?, ?, ?, ?, ?, ?)',
-        newId(), projectId, i, c.x, c.z, c.confidence);
+      const existing = old.find((o) => o.orden === i);
+      await tx.runAsync(
+        `INSERT INTO esquina (id, proyecto_id, orden, x, z, confiabilidad, modificado, pendiente) VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+         ON CONFLICT(id) DO UPDATE SET x = excluded.x, z = excluded.z, confiabilidad = excluded.confiabilidad,
+           modificado = excluded.modificado, pendiente = 1`,
+        existing?.id ?? newId(), projectId, i, c.x, c.z, c.confidence, t);
     }
-    await tx.runAsync('UPDATE proyecto SET modificado = ? WHERE id = ?', now(), projectId);
+    await touch(tx, projectId, t);
   });
+  notifyLocalChange();
 }
 
 export async function setHeight(db: SQLiteDatabase, projectId: string, h: number | null, confidence: number | null) {
-  await db.runAsync('UPDATE proyecto SET altura_m = ?, altura_conf = ?, modificado = ? WHERE id = ?', h, confidence, now(), projectId);
+  await db.runAsync('UPDATE proyecto SET altura_m = ?, altura_conf = ?, modificado = ?, pendiente = 1 WHERE id = ?', h, confidence, now(), projectId);
+  notifyLocalChange();
 }
 
 export async function setCalibration(db: SQLiteDatabase, projectId: string, k: number) {
-  await db.runAsync('UPDATE proyecto SET factor_k = ?, modificado = ? WHERE id = ?', k, now(), projectId);
+  await db.runAsync('UPDATE proyecto SET factor_k = ?, modificado = ?, pendiente = 1 WHERE id = ?', k, now(), projectId);
+  notifyLocalChange();
 }
 
 type MeasurementRow = {
@@ -163,13 +197,14 @@ export async function addMeasurement(db: SQLiteDatabase, projectId: string, m: O
   const full: Measurement = { ...m, id: newId(), created: now(), level: levelFor(m.confidence) };
   await db.withExclusiveTransactionAsync(async (tx) => {
     await tx.runAsync(
-      `INSERT INTO medicion (id, proyecto_id, tipo, valor_m, a_x, a_y, a_z, b_x, b_y, b_z, confiabilidad, nivel, factores, creado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO medicion (id, proyecto_id, tipo, valor_m, a_x, a_y, a_z, b_x, b_y, b_z, confiabilidad, nivel, factores, creado, modificado, pendiente)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       full.id, projectId, full.kind, full.valueM,
       full.a?.x ?? null, full.a?.y ?? null, full.a?.z ?? null, full.b?.x ?? null, full.b?.y ?? null, full.b?.z ?? null,
-      full.confidence, full.level, JSON.stringify(full.factors), full.created);
-    await tx.runAsync('UPDATE proyecto SET modificado = ? WHERE id = ?', full.created, projectId);
+      full.confidence, full.level, JSON.stringify(full.factors), full.created, full.created);
+    await touch(tx, projectId, full.created);
   });
+  notifyLocalChange();
   return full;
 }
 
@@ -184,8 +219,21 @@ export async function listMeasurements(db: SQLiteDatabase, projectId: string): P
 }
 
 export async function deleteMeasurement(db: SQLiteDatabase, projectId: string, id: string) {
-  await db.runAsync('DELETE FROM medicion WHERE id = ?', id);
-  await touch(db, projectId);
+  await db.withExclusiveTransactionAsync(async (tx) => {
+    await tx.runAsync('INSERT OR REPLACE INTO eliminado (tabla, id, fecha) VALUES (?, ?, ?)', 'medicion', id, now());
+    await tx.runAsync('DELETE FROM medicion WHERE id = ?', id);
+    await touch(tx, projectId);
+  });
+  notifyLocalChange();
+}
+
+export async function countPending(db: SQLiteDatabase): Promise<number> {
+  const r = await db.getFirstAsync<{ n: number }>(`
+    SELECT (SELECT COUNT(*) FROM proyecto WHERE pendiente = 1 AND es_demo = 0)
+         + (SELECT COUNT(*) FROM esquina WHERE pendiente = 1 AND proyecto_id IN (SELECT id FROM proyecto WHERE es_demo = 0))
+         + (SELECT COUNT(*) FROM medicion WHERE pendiente = 1 AND proyecto_id IN (SELECT id FROM proyecto WHERE es_demo = 0))
+         + (SELECT COUNT(*) FROM eliminado) AS n`);
+  return r?.n ?? 0;
 }
 
 export async function getSettings(db: SQLiteDatabase): Promise<Settings> {
