@@ -26,6 +26,8 @@ interface CloudState {
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
   signOut: (force?: boolean) => Promise<string | null>;
+  /** Elimina la cuenta y todos sus datos en la nube y en el teléfono (Ley 1581). */
+  deleteAccount: () => Promise<string | null>;
   syncNow: () => Promise<void>;
 }
 
@@ -129,10 +131,23 @@ export function CloudStateProvider({ children }: { children: React.ReactNode }) 
     return null;
   }, [db, refreshPending]);
 
+  const deleteAccount = useCallback(async () => {
+    if (!supabase) return null;
+    if (!online) return 'Necesitas conexión a Internet para eliminar tu cuenta.';
+    const { error } = await supabase.rpc('delete_my_account');
+    if (error) return authMessage(error.message);
+    // La sesión ya no es válida en el servidor; se limpia solo en local.
+    await supabase.auth.signOut({ scope: 'local' });
+    await wipeAccountData(db);
+    setRevision((r) => r + 1);
+    await refreshPending();
+    return null;
+  }, [db, online, refreshPending]);
+
   return (
     <Ctx.Provider value={{
       configured: cloudConfigured, email: session?.user.email ?? null, status, pending, lastSync, lastError,
-      revision, signIn, signUp, signOut, syncNow: run,
+      revision, signIn, signUp, signOut, deleteAccount, syncNow: run,
     }}>
       {children}
     </Ctx.Provider>

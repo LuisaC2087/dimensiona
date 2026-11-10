@@ -39,6 +39,23 @@ export default function Account() {
         ]);
       }
     };
+    const confirmDelete = () =>
+      Alert.alert(
+        'Eliminar cuenta',
+        `Se eliminarán para siempre la cuenta ${cloud.email} y todos sus proyectos, en la nube y en este teléfono. ¿Continuar?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Eliminar', style: 'destructive',
+            onPress: async () => {
+              setBusy(true);
+              const err = await cloud.deleteAccount();
+              setBusy(false);
+              Alert.alert(err ? 'No se pudo eliminar' : 'Cuenta eliminada', err ?? 'Tu cuenta y tus datos fueron eliminados.');
+            },
+          },
+        ],
+      );
     return (
       <ScrollView style={s.screen} contentContainerStyle={s.pad}>
         <Card>
@@ -54,7 +71,14 @@ export default function Account() {
         <Text style={s.muted}>
           Al cerrar sesión, tus proyectos se borran de este teléfono pero siguen en la nube; vuelven al iniciar sesión.
         </Text>
-        <Button label="Cerrar sesión" variant="danger" loading={busy} onPress={logout} />
+        <Button label="Cerrar sesión" variant="secondary" loading={busy} onPress={logout} />
+        <Card style={{ borderLeftColor: colors.danger }}>
+          <Text style={s.h2}>Eliminar cuenta</Text>
+          <Text style={s.muted}>
+            Borra de forma permanente tu cuenta, tu correo y todos tus proyectos y mediciones de la nube y de este teléfono. No se puede deshacer.
+          </Text>
+          <Button label="Eliminar mi cuenta" variant="danger" loading={busy} onPress={confirmDelete} />
+        </Card>
       </ScrollView>
     );
   }

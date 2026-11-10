@@ -70,3 +70,25 @@ begin
     execute format('create policy %I_owner on public.%I for all to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()))', t, t);
   end loop;
 end $$;
+
+-- RF-17 / Ley 1581: la persona puede eliminar su cuenta desde la app.
+-- Borra solo al usuario que llama (auth.uid()); sus proyectos, esquinas y mediciones
+-- se eliminan en cascada (on delete cascade sobre user_id).
+create or replace function public.delete_my_account() returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare uid uuid := auth.uid();
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+  delete from public.medicion where user_id = uid;
+  delete from public.esquina where user_id = uid;
+  delete from public.proyecto where user_id = uid;
+  delete from auth.users where id = uid;
+end $$;
+
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;
