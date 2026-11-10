@@ -7,7 +7,7 @@ import { Alert, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
-import { ARMeasureView, type ARCallbacks, type ReticleHit, type TrackingCause } from '../../ar/ARMeasureView';
+import { ARMeasureView, type ARCallbacks, type ReticleHit, type TrackingCause } from '../../ar/ARView';
 import { addMeasurement, saveCorners, setCalibration, setHeight } from '../../db/repo';
 import {
   calibrationFactor, combineReliability, computeReliability, formatLength, isFactorAcceptable, K_MAX, K_MIN, distance3, heightBetween, isHeightInRange, MAX_CORNERS,

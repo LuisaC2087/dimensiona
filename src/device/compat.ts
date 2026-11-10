@@ -106,6 +106,6 @@ export const AR_MESSAGES: Record<ARSupport, { title: string; body: string }> = {
   },
   unknown: {
     title: 'No se pudo verificar',
-    body: 'No logramos confirmar la compatibilidad. Revisa tu conexión si es la primera vez e intenta de nuevo.',
+    body: 'No logramos confirmar la compatibilidad. Si usas Expo Go, la realidad aumentada no está disponible: instala la versión de DIMENSIONA. Si no, revisa tu conexión e intenta de nuevo.',
   },
 };
