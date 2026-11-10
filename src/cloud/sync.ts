@@ -2,14 +2,19 @@
  * RF-18: sincronización bidireccional SQLite ⇄ Supabase.
  * 1) Subir: proyectos, esquinas y mediciones pendientes (no demo) y los borrados.
  * 2) Bajar: filas con sync_at > cursor, resueltas con resolveRemote (la nube es la base principal).
- * Las fotos no se suben (solo datos); sus notas sí (tabla nota).
+ * Fotos: el archivo va a Storage (fotos/<user>/<id>.jpg) y la fila a la tabla foto; se descargan bajo demanda en otros teléfonos.
  */
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { File } from 'expo-file-system';
 import { resolveRemote } from '../lib/syncRules';
+import { deleteFiles, photosDir } from '../photos/photos';
+
+export const BUCKET = 'fotos';
+const objectPath = (userId: string, photoId: string) => `${userId}/${photoId}.jpg`;
 
 const PAGE = 500;
-type Table = 'proyecto' | 'esquina' | 'medicion' | 'nota';
+type Table = 'proyecto' | 'esquina' | 'medicion' | 'nota' | 'foto';
 
 const cursorKey = (userId: string) => `cursor:${userId}`;
 
@@ -72,17 +77,46 @@ async function push(db: SQLiteDatabase, sb: SupabaseClient, userId: string) {
     for (const n of notes) await db.runAsync('UPDATE nota SET pendiente = 0 WHERE id = ? AND modificado = ?', n.id, n.modificado);
   }
 
+  // Fotos: primero el archivo, luego la fila
+  const photos = await db.getAllAsync<any>(`SELECT * FROM foto WHERE (pendiente = 1 OR (subida = 0 AND ruta IS NOT NULL)) AND ${owned}`, userId);
+  for (const f of photos) {
+    if (!f.subida && f.ruta) {
+      const local = new File(f.ruta);
+      if (local.exists) {
+        const body = await local.arrayBuffer();
+        check(await sb.storage.from(BUCKET).upload(objectPath(userId, f.id), body, { contentType: 'image/jpeg', upsert: true }));
+      }
+      await db.runAsync('UPDATE foto SET subida = 1 WHERE id = ?', f.id);
+    }
+    check(await sb.from('foto').upsert({
+      id: f.id, proyecto_id: f.proyecto_id, medicion_id: f.medicion_id, ruta_nube: objectPath(userId, f.id),
+      fecha: f.fecha, modificado: f.modificado, borrado: false,
+    }));
+    await db.runAsync('UPDATE foto SET pendiente = 0 WHERE id = ? AND modificado = ?', f.id, f.modificado);
+  }
+
   const dels = await db.getAllAsync<{ tabla: Table; id: string; fecha: string }>('SELECT * FROM eliminado');
-  for (const t of ['nota', 'medicion', 'esquina', 'proyecto'] as Table[]) {
+  for (const t of ['foto', 'nota', 'medicion', 'esquina', 'proyecto'] as Table[]) {
     const items = dels.filter((d) => d.tabla === t);
     if (!items.length) continue;
     const ids = items.map((d) => d.id);
     const fecha = items.reduce((m, d) => (d.fecha > m ? d.fecha : m), items[0].fecha);
     check(await sb.from(t).update({ borrado: true, modificado: fecha }).in('id', ids));
+    if (t === 'foto') {
+      // El archivo se elimina; la fila queda como borrado lógico para los demás teléfonos.
+      const r = await sb.storage.from(BUCKET).remove(ids.map((id) => objectPath(userId, id)));
+      if (r.error) throw new Error(r.error.message);
+    }
     if (t === 'proyecto') {
       check(await sb.from('esquina').update({ borrado: true, modificado: fecha }).in('proyecto_id', ids));
       check(await sb.from('medicion').update({ borrado: true, modificado: fecha }).in('proyecto_id', ids));
       check(await sb.from('nota').update({ borrado: true, modificado: fecha }).in('proyecto_id', ids));
+      const ph = check(await sb.from('foto').select('id').in('proyecto_id', ids).eq('borrado', false)) as { id: string }[];
+      if (ph.length) {
+        check(await sb.from('foto').update({ borrado: true, modificado: fecha }).in('proyecto_id', ids));
+        const r = await sb.storage.from(BUCKET).remove(ph.map((p) => objectPath(userId, p.id)));
+        if (r.error) throw new Error(r.error.message);
+      }
     }
     for (const id of ids) await db.runAsync('DELETE FROM eliminado WHERE tabla = ? AND id = ?', t, id);
   }
@@ -165,7 +199,41 @@ async function pull(db: SQLiteDatabase, sb: SupabaseClient, userId: string) {
     }
   }
 
+  for (const f of await fetchSince(sb, 'foto', since)) {
+    track(f);
+    const action = resolveRemote(await localState(db, 'foto', f.id), { modified: iso(f.modificado), deleted: f.borrado });
+    if (action === 'deleteLocal') {
+      const r = await db.getFirstAsync<{ ruta: string | null }>('SELECT ruta FROM foto WHERE id = ?', f.id);
+      await db.runAsync('DELETE FROM foto WHERE id = ?', f.id);
+      if (r?.ruta) deleteFiles([r.ruta]);
+    }
+    if (action === 'apply' && (await projectExists(f.proyecto_id))) {
+      await db.runAsync(
+        `INSERT INTO foto (id, proyecto_id, medicion_id, ruta, fecha, modificado, pendiente, subida) VALUES (?, ?, ?, NULL, ?, ?, 0, 1)
+         ON CONFLICT(id) DO UPDATE SET medicion_id = excluded.medicion_id, modificado = excluded.modificado, pendiente = 0, subida = 1`,
+        f.id, f.proyecto_id, f.medicion_id, iso(f.fecha), iso(f.modificado));
+    }
+  }
+
   await setCursor(db, userId, maxSync);
+  await downloadMissing(db, sb, userId);
+}
+
+/** Descarga los archivos de fotos que existen en la nube pero no en este teléfono. Si falla, se reintenta en la próxima sincronización. */
+async function downloadMissing(db: SQLiteDatabase, sb: SupabaseClient, userId: string) {
+  const missing = await db.getAllAsync<{ id: string }>('SELECT id FROM foto WHERE ruta IS NULL AND subida = 1');
+  for (const m of missing) {
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(objectPath(userId, m.id), 120);
+    if (error || !data) continue;
+    try {
+      const dest = new File(photosDir(), `${m.id}.jpg`);
+      if (dest.exists) dest.delete();
+      const file = await File.downloadFileAsync(data.signedUrl, dest);
+      await db.runAsync('UPDATE foto SET ruta = ? WHERE id = ?', file.uri, m.id);
+    } catch {
+      // sin red o archivo ausente: se reintenta después
+    }
+  }
 }
 
 let running: Promise<void> | null = null;
@@ -184,7 +252,20 @@ export function syncNow(db: SQLiteDatabase, sb: SupabaseClient, userId: string):
 }
 
 /** Al cerrar sesión: borra del teléfono los datos de la cuenta (quedan en la nube). Conserva el demo y ajustes. */
+/** Borra todos los archivos del usuario en Storage (antes de eliminar la cuenta). */
+export async function removeAllUserFiles(sb: SupabaseClient, userId: string): Promise<void> {
+  for (;;) {
+    const { data, error } = await sb.storage.from(BUCKET).list(userId, { limit: 100 });
+    if (error) throw new Error(error.message);
+    if (!data?.length) return;
+    const r = await sb.storage.from(BUCKET).remove(data.map((o) => `${userId}/${o.name}`));
+    if (r.error) throw new Error(r.error.message);
+  }
+}
+
 export async function wipeAccountData(db: SQLiteDatabase): Promise<void> {
+  const files = await db.getAllAsync<{ ruta: string }>('SELECT f.ruta FROM foto f JOIN proyecto p ON p.id = f.proyecto_id WHERE p.es_demo = 0 AND f.ruta IS NOT NULL');
+  deleteFiles(files.map((f) => f.ruta));
   await db.withExclusiveTransactionAsync(async (tx) => {
     await tx.runAsync('DELETE FROM proyecto WHERE es_demo = 0');
     await tx.runAsync('DELETE FROM eliminado');

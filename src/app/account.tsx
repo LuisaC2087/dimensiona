@@ -75,7 +75,7 @@ export default function Account() {
         <Card style={{ borderLeftColor: colors.danger }}>
           <Text style={s.h2}>Eliminar cuenta</Text>
           <Text style={s.muted}>
-            Borra de forma permanente tu cuenta, tu correo y todos tus proyectos y mediciones de la nube y de este teléfono. No se puede deshacer.
+            Borra de forma permanente tu cuenta, tu correo y todos tus proyectos, mediciones, notas y fotos de la nube y de este teléfono. No se puede deshacer.
           </Text>
           <Button label="Eliminar mi cuenta" variant="danger" loading={busy} onPress={confirmDelete} />
         </Card>

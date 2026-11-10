@@ -1,4 +1,4 @@
-/** Fotos y notas del proyecto (RF-14). Las notas se sincronizan; las fotos quedan en el teléfono. */
+/** Fotos y notas del proyecto (RF-14). Con sesión, fotos y notas se guardan también en la nube. */
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Image, Pressable, Text, TextInput, View } from 'react-native';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -75,7 +75,7 @@ export function PhotoGallery({ projectId }: { projectId: string }) {
         <Text style={s.body}>{n.text}</Text>
       </Pressable>
       <View style={s.row}>
-        <Text style={s.muted}>{new Date(n.modified).toLocaleString('es-CO')}{n.photoId && !photoIds.has(n.photoId) ? ' · foto en otro teléfono' : ''}</Text>
+        <Text style={s.muted}>{new Date(n.modified).toLocaleString('es-CO')}</Text>
         <Button label="Eliminar" variant="secondary" onPress={() => removeNote(n)} />
       </View>
     </View>
@@ -97,12 +97,19 @@ export function PhotoGallery({ projectId }: { projectId: string }) {
         <Button label="Galería" variant="secondary" style={{ flex: 1 }} onPress={() => add('gallery')} />
       </View>
       {msg && <Text style={{ color: colors.warn, fontSize: 15 }}>{msg}</Text>}
-      <Text style={s.muted}>Las fotos se guardan solo en este teléfono; sus notas también se guardan en la nube.</Text>
+      <Text style={s.muted}>Con sesión iniciada, las fotos y notas se guardan también en la nube.</Text>
       {photos.map((p) => {
         const pn = notes.filter((n) => n.photoId === p.id);
         return (
           <Card key={p.id}>
-            <Image source={{ uri: p.uri }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 10 }} resizeMode="cover" accessibilityLabel="Foto del proyecto" />
+            {p.uri ? (
+              <Image source={{ uri: p.uri }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 10 }} resizeMode="cover" accessibilityLabel="Foto del proyecto" />
+            ) : (
+              <View style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={s.muted}>Descargando de la nube…</Text>
+              </View>
+            )}
+            {p.uri && !p.uploaded && <Text style={s.muted}>☁ Pendiente de subir</Text>}
             {pn.map((n) => <NoteView key={n.id} n={n} />)}
             {editing === `photo:${p.id}` ? (
               <NoteEditor initial="" onCancel={() => setEditing(null)} onSave={(t) => save(t, { photoId: p.id })} />

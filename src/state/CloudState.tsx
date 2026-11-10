@@ -8,7 +8,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { useSQLiteContext } from 'expo-sqlite';
 import type { Session } from '@supabase/supabase-js';
 import { cloudConfigured, supabase } from '../cloud/supabase';
-import { syncNow, wipeAccountData } from '../cloud/sync';
+import { removeAllUserFiles, syncNow, wipeAccountData } from '../cloud/sync';
 import { onLocalChange } from '../db/changes';
 import { countPending } from '../db/repo';
 
@@ -134,6 +134,12 @@ export function CloudStateProvider({ children }: { children: React.ReactNode }) 
   const deleteAccount = useCallback(async () => {
     if (!supabase) return null;
     if (!online) return 'Necesitas conexión a Internet para eliminar tu cuenta.';
+    if (!session) return null;
+    try {
+      await removeAllUserFiles(supabase, session.user.id);
+    } catch (e) {
+      return authMessage(e instanceof Error ? e.message : String(e));
+    }
     const { error } = await supabase.rpc('delete_my_account');
     if (error) return authMessage(error.message);
     // La sesión ya no es válida en el servidor; se limpia solo en local.
@@ -142,7 +148,7 @@ export function CloudStateProvider({ children }: { children: React.ReactNode }) 
     setRevision((r) => r + 1);
     await refreshPending();
     return null;
-  }, [db, online, refreshPending]);
+  }, [db, online, session, refreshPending]);
 
   return (
     <Ctx.Provider value={{

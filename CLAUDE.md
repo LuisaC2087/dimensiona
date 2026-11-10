@@ -6,7 +6,7 @@ App móvil (Android, Expo + React Native + TypeScript) que mide y reconstruye ha
 - **Idioma**: toda la UI en español de Colombia (ROT-01). Código e identificadores en inglés; comentarios breves en español permitidos.
 - **Unidades internas en metros** siempre; convertir solo al mostrar (RF-15).
 - **Ninguna medida sin su confiabilidad** (RNF-15) ni sin unidad. Resultados = "estimaciones" (ROT-05).
-- **Offline primero, nube principal** (CR-01, Rev. 1.1): SQLite es la copia de trabajo y la app funciona 100 % sin red; si hay sesión, se sincroniza con Supabase (base principal). Toda escritura local pasa por `src/db/repo.ts` (marca `pendiente` y registra borrados). Fotos y demo nunca se suben. Permisos: solo CAMERA (+ INTERNET).
+- **Offline primero, nube principal** (CR-01, Rev. 1.1): SQLite es la copia de trabajo y la app funciona 100 % sin red; si hay sesión, se sincroniza con Supabase (base principal). Toda escritura local pasa por `src/db/repo.ts` (marca `pendiente` y registra borrados). El demo nunca se sube; las fotos van a Supabase Storage (bucket privado `fotos`, `<user_id>/<foto_id>.jpg`). Permisos: solo CAMERA (+ INTERNET).
 - **Lógica pura separada**: todo cálculo (distancia, área, perímetro, volumen, calibración, confiabilidad, incertidumbre, unidades, validación de polígonos) vive en `src/lib/` sin importar React, Expo ni Viro. Cada función con pruebas Jest (PR-04: error ≤ 0,01 %).
 - **Identidad visual**: fondo `#0B0B0C`, acento `#FFD100`, texto ≥ 14 sp, contraste ≥ 4,5:1, objetivos táctiles ≥ 48 dp (ROT-03, ROT-06). Usar `src/theme.ts`.
 - **No funciona en Expo Go**: requiere development build (ViroReact es nativo).

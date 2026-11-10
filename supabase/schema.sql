@@ -61,6 +61,20 @@ create table if not exists public.nota (
 );
 
 create index if not exists nota_user_sync on public.nota (user_id, sync_at);
+
+-- Fotos (RF-14, CR-01): la fila describe la foto; el archivo está en Storage, bucket «fotos», en <user_id>/<id>.jpg
+create table if not exists public.foto (
+  id uuid primary key,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  proyecto_id uuid not null references public.proyecto(id) on delete cascade,
+  medicion_id uuid,
+  ruta_nube text not null,
+  fecha timestamptz not null,
+  modificado timestamptz not null,
+  borrado boolean not null default false,
+  sync_at timestamptz not null default now()
+);
+create index if not exists foto_user_sync on public.foto (user_id, sync_at);
 create index if not exists proyecto_user_sync on public.proyecto (user_id, sync_at);
 create index if not exists esquina_user_sync on public.esquina (user_id, sync_at);
 create index if not exists medicion_user_sync on public.medicion (user_id, sync_at);
@@ -76,7 +90,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['proyecto','esquina','medicion','nota'] loop
+  foreach t in array array['proyecto','esquina','medicion','nota','foto'] loop
     execute format('drop trigger if exists %I_sync_at on public.%I', t, t);
     execute format('create trigger %I_sync_at before insert or update on public.%I for each row execute function public.set_sync_at()', t, t);
     execute format('alter table public.%I enable row level security', t);
@@ -85,7 +99,22 @@ begin
   end loop;
 end $$;
 
+-- Bucket privado de fotos (máx. 5 MB por archivo, solo JPEG). Cada usuario solo accede a su carpeta.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('fotos', 'fotos', false, 5242880, array['image/jpeg'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists fotos_owner_select on storage.objects;
+drop policy if exists fotos_owner_insert on storage.objects;
+drop policy if exists fotos_owner_update on storage.objects;
+drop policy if exists fotos_owner_delete on storage.objects;
+create policy fotos_owner_select on storage.objects for select to authenticated using (bucket_id = 'fotos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy fotos_owner_insert on storage.objects for insert to authenticated with check (bucket_id = 'fotos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy fotos_owner_update on storage.objects for update to authenticated using (bucket_id = 'fotos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy fotos_owner_delete on storage.objects for delete to authenticated using (bucket_id = 'fotos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
 -- RF-17 / Ley 1581: la persona puede eliminar su cuenta desde la app.
+-- (La app borra antes sus archivos de Storage; Supabase no permite borrarlos desde SQL.)
 -- Borra solo al usuario que llama (auth.uid()); sus proyectos, esquinas y mediciones
 -- se eliminan en cascada (on delete cascade sobre user_id).
 create or replace function public.delete_my_account() returns void
@@ -98,6 +127,7 @@ begin
   if uid is null then
     raise exception 'not authenticated';
   end if;
+  delete from public.foto where user_id = uid;
   delete from public.nota where user_id = uid;
   delete from public.medicion where user_id = uid;
   delete from public.esquina where user_id = uid;

@@ -35,7 +35,7 @@ RNF-01 marcador ≤ 500 ms · RNF-02 cálculo+plano ≤ 1 s · RNF-03 guardar �
 - proyecto(id, nombre, tipo_espacio, altura_m?, factor_k=1, es_demo, creado, modificado)
 - esquina(id, proyecto_id, orden, x, z, confiabilidad)
 - medicion(id, proyecto_id, tipo[distancia|altura|referencia], valor_m, a_x..b_z, confiabilidad, nivel, factores JSON)
-- foto(id, proyecto_id, medicion_id?, ruta, fecha)
+- foto(id, proyecto_id, medicion_id?, ruta?, fecha, subida) — *Rev. 1.1: se sincroniza; el archivo va a Supabase Storage*
 - nota(id, proyecto_id, foto_id?, texto≤500, creado, modificado) — *Rev. 1.1: separada de foto para sincronizarla*
 - ajustes(unidad, decimales, tutorial_visto)
 
@@ -53,7 +53,7 @@ Inicio/Proyectos · Tutorial · Escaneo y medición (AR) · Habitación guiada �
 | RF | Nombre | Prior. | Descripción | Criterio de aceptación |
 |---|---|---|---|---|
 | RF-17 | Cuenta de usuario | Media | Registro e inicio de sesión con correo y contraseña (Supabase Auth). Opcional: sin cuenta la app funciona solo en local. Autorización expresa de tratamiento del correo (Ley 1581). Al cerrar sesión se borran los datos del teléfono (siguen en la nube); si hay cambios sin subir se advierte. Botón «Eliminar mi cuenta» (con confirmación, requiere red) que borra la cuenta y todos sus datos en la nube y el teléfono (función `delete_my_account`). | Crear cuenta, cerrar e iniciar sesión en otro teléfono recupera el 100 % de los proyectos (PR-14). |
-| RF-18 | Sincronización nube ⇄ local | Media | La nube (Supabase/PostgreSQL) es la base principal; SQLite es la copia de trabajo offline. Se sube y baja al iniciar sesión, al recuperar conexión, tras cada cambio (1,5 s) y cada 5 min. Conflictos: gana la nube salvo cambio local pendiente más reciente; empate → nube. Borrados lógicos. Se sincronizan proyectos, esquinas, mediciones y **notas** (las notas se separan de las fotos en la tabla `nota`); **no** las fotos ni el proyecto demo. | Con el teléfono en modo avión se crean 5 mediciones; al reconectar quedan en la nube en ≤ 30 s, sin pérdidas ni duplicados (PR-15). |
+| RF-18 | Sincronización nube ⇄ local | Media | La nube (Supabase/PostgreSQL) es la base principal; SQLite es la copia de trabajo offline. Se sube y baja al iniciar sesión, al recuperar conexión, tras cada cambio (1,5 s) y cada 5 min. Conflictos: gana la nube salvo cambio local pendiente más reciente; empate → nube. Borrados lógicos. Se sincronizan proyectos, esquinas, mediciones, **notas** (tabla `nota`) y **fotos** (archivo JPEG en Supabase Storage, bucket privado `fotos`, carpeta por usuario; en otros teléfonos se descargan automáticamente); **no** el proyecto demo. | Con el teléfono en modo avión se crean 5 mediciones; al reconectar quedan en la nube en ≤ 30 s, sin pérdidas ni duplicados (PR-15). |
 
 ## Requisitos modificados
 | ID | Antes (Rev. 1.0) | Ahora (Rev. 1.1) |
@@ -62,7 +62,7 @@ Inicio/Proyectos · Tutorial · Escaneo y medición (AR) · Habitación guiada �
 | 2.1 Perspectiva | «El producto no utiliza servidores» | Usa Supabase (plan gratuito) como base principal; ARCore y la medición siguen siendo locales. |
 | 2.4 / 2.5 | Todo en el dispositivo | Dependencia de Supabase. Supuesto: el plan gratuito pausa el proyecto tras 7 días sin actividad (se reactiva desde el panel); límite 500 MB de BD. |
 | 3.1.4 Comunicaciones | Solo descarga de ARCore | HTTPS (TLS) a la API REST de Supabase con token de sesión; datos aislados por usuario con Row Level Security. |
-| RNF-07 | Datos solo en almacenamiento privado; no se envían a servidores | Sin cuenta: solo en el teléfono. Con cuenta: proyectos y mediciones también en Supabase, cifrados en tránsito y accesibles solo por su dueño (RLS). Fotos nunca salen del teléfono. |
+| RNF-07 | Datos solo en almacenamiento privado; no se envían a servidores | Sin cuenta: solo en el teléfono. Con cuenta: proyectos, mediciones, notas y fotos también en Supabase (BD + Storage), cifrados en tránsito y accesibles solo por su dueño (RLS). Plan gratuito: 1 GB de archivos (≈ 1.000 fotos). |
 | RNF-08 | Solo CAMERA | CAMERA + INTERNET (ya incluido por Android por defecto). Siguen bloqueados ubicación, contactos y micrófono. |
 | RNF-16 | 100 % sin Internet | 100 % de las funciones de medición y consulta sin Internet; solo cuenta y sincronización requieren red. |
 | ROT-04 | No recolectar datos personales | Único dato personal: correo de la cuenta, con autorización expresa, finalidad declarada y posibilidad de eliminación. |

@@ -38,7 +38,7 @@ export default function SettingsScreen() {
       <Card>
         <Text style={s.h2}>Privacidad</Text>
         <Text style={s.body}>
-          DIMENSIONA usa la cámara solo para medir. Sin cuenta, todo queda en este teléfono. Con cuenta, tus proyectos y medidas (no las fotos) se guardan también en la nube; el único dato personal es tu correo, tratado conforme a la Ley 1581 de 2012.
+          DIMENSIONA usa la cámara solo para medir. Sin cuenta, todo queda en este teléfono. Con cuenta, tus proyectos, medidas, notas y fotos se guardan también en la nube (solo tú puedes verlos); el único dato personal es tu correo, tratado conforme a la Ley 1581 de 2012.
         </Text>
       </Card>
       <Card>

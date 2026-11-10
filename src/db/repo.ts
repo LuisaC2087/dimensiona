@@ -134,7 +134,7 @@ export async function renameProject(db: SQLiteDatabase, id: string, name: string
 
 /** Devuelve las rutas de fotos para que el llamador borre los archivos (RNF-10). */
 export async function deleteProject(db: SQLiteDatabase, id: string): Promise<string[]> {
-  const photos = await db.getAllAsync<{ ruta: string }>('SELECT ruta FROM foto WHERE proyecto_id = ?', id);
+  const photos = await db.getAllAsync<{ ruta: string }>('SELECT ruta FROM foto WHERE proyecto_id = ? AND ruta IS NOT NULL', id);
   const p = await db.getFirstAsync<{ es_demo: number }>('SELECT es_demo FROM proyecto WHERE id = ?', id);
   await db.withExclusiveTransactionAsync(async (tx) => {
     if (p && !p.es_demo) {
@@ -233,6 +233,7 @@ export async function countPending(db: SQLiteDatabase): Promise<number> {
          + (SELECT COUNT(*) FROM esquina WHERE pendiente = 1 AND proyecto_id IN (SELECT id FROM proyecto WHERE es_demo = 0))
          + (SELECT COUNT(*) FROM medicion WHERE pendiente = 1 AND proyecto_id IN (SELECT id FROM proyecto WHERE es_demo = 0))
          + (SELECT COUNT(*) FROM nota WHERE pendiente = 1 AND proyecto_id IN (SELECT id FROM proyecto WHERE es_demo = 0))
+         + (SELECT COUNT(*) FROM foto WHERE (pendiente = 1 OR (subida = 0 AND ruta IS NOT NULL)) AND proyecto_id IN (SELECT id FROM proyecto WHERE es_demo = 0))
          + (SELECT COUNT(*) FROM eliminado) AS n`);
   return r?.n ?? 0;
 }

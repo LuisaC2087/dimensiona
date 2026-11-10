@@ -1,16 +1,18 @@
 /**
  * RF-14: fotos (JPEG en el almacenamiento privado de la app). Las notas viven en src/db/notes.ts.
- * Las fotos nunca se suben a la nube (CR-01).
+ * Con sesión, las fotos se suben a Supabase Storage (bucket «fotos», carpeta del usuario) — CR-01.
  * expo-image-picker se carga bajo demanda: si el APK instalado no lo trae, se avisa en vez de cerrarse.
  */
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { Directory, File, Paths } from 'expo-file-system';
 import { newId, now } from '../db/repo';
+import { notifyLocalChange } from '../db/changes';
 import { deleteNotesOfPhoto } from '../db/notes';
 
-export interface Photo { id: string; uri: string; measurementId: string | null; date: string }
+/** uri = null: la foto está en la nube y aún no se descarga a este teléfono. */
+export interface Photo { id: string; uri: string | null; measurementId: string | null; date: string; uploaded: boolean }
 
-function photosDir(): Directory {
+export function photosDir(): Directory {
   const d = new Directory(Paths.document, 'fotos');
   if (!d.exists) d.create({ intermediates: true, idempotent: true });
   return d;
@@ -38,9 +40,11 @@ export async function addPhoto(db: SQLiteDatabase, projectId: string, source: 'c
     if (Paths.availableDiskSpace < 5 * 1024 * 1024) return { ok: false, reason: 'storage' };
     const dest = new File(photosDir(), `${id}.jpg`);
     new File(res.assets[0].uri).copy(dest);
-    const photo: Photo = { id, uri: dest.uri, measurementId: measurementId ?? null, date: now() };
-    await db.runAsync('INSERT INTO foto (id, proyecto_id, medicion_id, ruta, fecha) VALUES (?, ?, ?, ?, ?)',
-      id, projectId, photo.measurementId, photo.uri, photo.date);
+    const photo: Photo = { id, uri: dest.uri, measurementId: measurementId ?? null, date: now(), uploaded: false };
+    await db.runAsync('INSERT INTO foto (id, proyecto_id, medicion_id, ruta, fecha, modificado, pendiente, subida) VALUES (?, ?, ?, ?, ?, ?, 1, 0)',
+      id, projectId, photo.measurementId, photo.uri, photo.date, photo.date);
+    await db.runAsync('UPDATE proyecto SET modificado = ?, pendiente = 1 WHERE id = ?', photo.date, projectId);
+    notifyLocalChange();
     return { ok: true, photo };
   } catch {
     return { ok: false, reason: 'storage' };
@@ -48,9 +52,9 @@ export async function addPhoto(db: SQLiteDatabase, projectId: string, source: 'c
 }
 
 export async function listPhotos(db: SQLiteDatabase, projectId: string): Promise<Photo[]> {
-  const rows = await db.getAllAsync<{ id: string; ruta: string; medicion_id: string | null; fecha: string }>(
+  const rows = await db.getAllAsync<{ id: string; ruta: string | null; medicion_id: string | null; fecha: string; subida: number }>(
     'SELECT * FROM foto WHERE proyecto_id = ? ORDER BY fecha DESC', projectId);
-  return rows.map((r) => ({ id: r.id, uri: r.ruta, measurementId: r.medicion_id, date: r.fecha }));
+  return rows.map((r) => ({ id: r.id, uri: r.ruta, measurementId: r.medicion_id, date: r.fecha, uploaded: !!r.subida }));
 }
 
 export function deleteFiles(uris: string[]): void {
@@ -65,10 +69,16 @@ export function deleteFiles(uris: string[]): void {
 }
 
 export async function deletePhoto(db: SQLiteDatabase, id: string): Promise<void> {
-  const r = await db.getFirstAsync<{ ruta: string }>('SELECT ruta FROM foto WHERE id = ?', id);
+  const r = await db.getFirstAsync<{ ruta: string | null; proyecto_id: string }>('SELECT ruta, proyecto_id FROM foto WHERE id = ?', id);
   await deleteNotesOfPhoto(db, id);
-  await db.runAsync('DELETE FROM foto WHERE id = ?', id);
-  if (r) deleteFiles([r.ruta]);
+  const t = now();
+  await db.withExclusiveTransactionAsync(async (tx) => {
+    await tx.runAsync('INSERT OR REPLACE INTO eliminado (tabla, id, fecha) VALUES (?, ?, ?)', 'foto', id, t);
+    await tx.runAsync('DELETE FROM foto WHERE id = ?', id);
+    if (r) await tx.runAsync('UPDATE proyecto SET modificado = ?, pendiente = 1 WHERE id = ?', t, r.proyecto_id);
+  });
+  if (r?.ruta) deleteFiles([r.ruta]);
+  notifyLocalChange();
 }
 
 export const PICK_MESSAGES: Record<Exclude<PickResult, { ok: true }>['reason'], string | null> = {

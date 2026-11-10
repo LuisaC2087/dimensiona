@@ -47,14 +47,19 @@ CREATE TABLE IF NOT EXISTS medicion (
   modificado TEXT NOT NULL,
   pendiente INTEGER NOT NULL DEFAULT 1
 );
+-- ruta: archivo local (NULL si la foto vino de la nube y aún no se descarga).
+-- subida = 1 cuando el archivo ya está en Supabase Storage.
 CREATE TABLE IF NOT EXISTS foto (
   id TEXT PRIMARY KEY NOT NULL,
   proyecto_id TEXT NOT NULL REFERENCES proyecto(id) ON DELETE CASCADE,
-  medicion_id TEXT REFERENCES medicion(id) ON DELETE SET NULL,
-  ruta TEXT NOT NULL,
-  fecha TEXT NOT NULL
+  medicion_id TEXT,
+  ruta TEXT,
+  fecha TEXT NOT NULL,
+  modificado TEXT NOT NULL,
+  pendiente INTEGER NOT NULL DEFAULT 1,
+  subida INTEGER NOT NULL DEFAULT 0
 );
--- Notas separadas de las fotos para poder sincronizarlas (las fotos no salen del teléfono).
+-- Notas en tabla propia (una foto puede tener nota; también hay notas generales).
 -- foto_id es una referencia débil: en otro dispositivo la foto puede no existir.
 CREATE TABLE IF NOT EXISTS nota (
   id TEXT PRIMARY KEY NOT NULL,
