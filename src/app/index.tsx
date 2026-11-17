@@ -27,16 +27,29 @@ export default function Home() {
   return (
     <View style={s.screen}>
       <FlatList
-        contentContainerStyle={[s.pad, { paddingBottom: 120 }]}
+        contentContainerStyle={[s.pad, { paddingBottom: 48 }]}
         data={projects}
         keyExtractor={(p) => p.id}
         ListHeaderComponent={
           <View style={{ gap: space.md }}>
             <CompatBanner />
+            <Pressable accessibilityRole="button" accessibilityLabel="Medir un objeto o una distancia"
+              onPress={() => router.push('/measure')}
+              style={({ pressed }) => [hero, { backgroundColor: colors.accent, opacity: pressed ? 0.85 : 1 }]}>
+              <Text style={[heroTitle, { color: colors.onAccent }]}>📏 Medir</Text>
+              <Text style={{ color: colors.onAccent, fontSize: 15 }}>Un objeto (se detecta solo) o una distancia, en m o cm</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Escanear una habitación"
+              onPress={() => router.push('/new')}
+              style={({ pressed }) => [hero, { backgroundColor: colors.surfaceAlt, opacity: pressed ? 0.85 : 1 }]}>
+              <Text style={[heroTitle, { color: colors.text }]}>🏠 Escanear habitación</Text>
+              <Text style={s.muted}>Plano, área, altura y modelo 3D. Se guarda como proyecto</Text>
+            </Pressable>
             <SyncBadge />
             <View style={s.row}>
               <Button label="Ver demostración" variant="secondary" style={{ flex: 1 }}
                 onPress={() => demo && router.push(`/project/${demo.id}`)} />
+              <Button label="Cómo medir" variant="secondary" onPress={() => router.push('/tutorial')} />
               <Button label="Ajustes" variant="secondary" onPress={() => router.push('/settings')} />
             </View>
             <Text style={s.h1}>Mis proyectos</Text>
@@ -55,13 +68,9 @@ export default function Home() {
         )}
         ListEmptyComponent={<Text style={s.muted}>Aún no tienes proyectos.</Text>}
       />
-      <Pressable
-        accessibilityRole="button" accessibilityLabel="Nuevo proyecto"
-        onPress={() => router.push('/new')}
-        style={{ position: 'absolute', right: 24, bottom: 32, width: 64, height: 64, borderRadius: 32, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}
-      >
-        <Text style={{ fontSize: 32, color: colors.onAccent, fontWeight: '700' }}>+</Text>
-      </Pressable>
     </View>
   );
 }
+
+const hero = { borderRadius: 16, padding: space.md, minHeight: 88, justifyContent: 'center', gap: 4 } as const;
+const heroTitle = { fontSize: 24, fontWeight: '800' } as const;

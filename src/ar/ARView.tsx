@@ -3,12 +3,16 @@
  * (development build / APK). En Expo Go o en web se muestra un aviso en vez de cerrar la app.
  */
 import { NativeModules, Platform, Text, View } from 'react-native';
-import type { ARCallbacks, ARDrawing } from './ARMeasureView';
+import type { ARCallbacks, ARDrawing, CaptureFn, Detection, HitTestFn } from './ARMeasureView';
 import { colors } from '../theme';
 
-export type { ARCallbacks, ARDrawing, DetectedPlane, ReticleHit, TrackingCause } from './ARMeasureView';
+export type { Detection, HitTestFn, CaptureFn, ARCallbacks, ARDrawing, ARObjectOverlay, DetectedPlane, ReticleHit, TrackingCause } from './ARMeasureView';
 
-type Props = { callbacks: ARCallbacks; drawing: ARDrawing; resetSignal: number };
+type Props = {
+  callbacks: ARCallbacks; drawing: ARDrawing; resetSignal: number;
+  captureRef?: { current: CaptureFn | null }; hitTestRef?: { current: HitTestFn | null };
+  onDetections?: (d: Detection[]) => void; onDetectorError?: (msg: string) => void; onDepthSupport?: (supported: boolean) => void; screenSize?: { w: number; h: number };
+};
 
 export const arNativeAvailable = Platform.OS === 'android' && !!NativeModules.VRTARSceneNavigatorModule;
 

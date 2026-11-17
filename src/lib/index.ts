@@ -6,3 +6,6 @@ export * from './units';
 export * from './arSupport';
 export * from './roomDetect';
 export * from './view3d';
+export * from './objectDetect';
+export * from './objectLabels';
+export * from './boxMeasure';

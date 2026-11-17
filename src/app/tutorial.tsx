@@ -16,7 +16,7 @@ const PAGES = [
 export default function Tutorial() {
   const { updateSettings } = useAppState();
   const [i, setI] = useState(0);
-  const finish = async () => { await updateSettings({ tutorialSeen: true }); router.replace('/'); };
+  const finish = async () => { await updateSettings({ tutorialSeen: true }); if (router.canGoBack()) router.back(); else router.replace('/'); };
   const p = PAGES[i];
   return (
     <SafeAreaView style={[s.screen, { padding: space.lg, justifyContent: 'space-between' }]}>

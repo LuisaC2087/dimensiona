@@ -53,6 +53,8 @@
           }
         }
       ],
+      "@reactvision/react-viro-onnx",
+      "./plugins/withOnnxModel",
       "expo-font",
       [
         "expo-image-picker",

@@ -17,6 +17,8 @@ export type SyncStatus = 'disabled' | 'signedOut' | 'offline' | 'syncing' | 'syn
 interface CloudState {
   configured: boolean;
   email: string | null;
+  online: boolean;
+  signedIn: boolean;
   status: SyncStatus;
   pending: number;
   lastSync: Date | null;
@@ -152,7 +154,7 @@ export function CloudStateProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <Ctx.Provider value={{
-      configured: cloudConfigured, email: session?.user.email ?? null, status, pending, lastSync, lastError,
+      configured: cloudConfigured, email: session?.user.email ?? null, online, signedIn: !!session, status, pending, lastSync, lastError,
       revision, signIn, signUp, signOut, deleteAccount, syncNow: run,
     }}>
       {children}

@@ -47,6 +47,10 @@ Actualiza esta lista al cerrar cada fase.
 - Variables: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_KEY` en `.env.local` (local) y en EAS (`eas env:create`). Sin ellas la app funciona solo en local.
 - Reglas de conflicto: `src/lib/syncRules.ts` (con pruebas). Cambios de esquema: actualizar a la vez `src/db/schema.ts`, `supabase/schema.sql` y `src/cloud/sync.ts`.
 
+- IA (CR-03): Edge Function `supabase/functions/identify` (Deno, Claude). Secreto `ANTHROPIC_API_KEY` con `supabase secrets set`; nunca en la app ni en EXPO_PUBLIC_*. Cliente: `src/ai/identify.ts`. Solo en línea y con sesión.
+
+- Reconocimiento (CR-04): modelo `assets/models/dimensiona-yoloe.onnx` generado con `python scripts/export_yoloe.py` (ultralytics); el plugin `plugins/withOnnxModel.js` lo copia al APK. Requiere `@reactvision/react-viro-onnx` (plugin después de Viro) y una build nueva.
+
 ## Versiones fijadas
 - **Expo SDK 57 / RN 0.86**: ViroReact 3.1.1 exige `expo <58` y `react-native 0.86.x`. No actualizar el SDK hasta que Viro lo soporte.
 - Telemetría de Viro desactivada (plugin `telemetry: false` + `ViroTelemetry.setEnabled(false)`) por RNF-07.

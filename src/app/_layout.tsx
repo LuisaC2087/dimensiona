@@ -33,6 +33,7 @@ export default function RootLayout() {
           <Stack.Screen name="new" options={{ title: 'Nuevo proyecto' }} />
           <Stack.Screen name="project/[id]" options={{ title: 'Resultados' }} />
           <Stack.Screen name="scan/[id]" options={{ title: 'Escanear', headerShown: false }} />
+          <Stack.Screen name="measure" options={{ title: 'Medir', headerShown: false }} />
           <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
           <Stack.Screen name="calibrate/[id]" options={{ title: 'Calibración' }} />
           <Stack.Screen name="account" options={{ title: 'Cuenta y nube' }} />

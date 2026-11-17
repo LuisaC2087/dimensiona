@@ -96,3 +96,26 @@ Inicio/Proyectos · Tutorial · Escaneo y medición (AR) · Habitación guiada �
 **Corrección asociada:** la detección de planos no se activaba (tipos de detección enviados a ViroReact con mayúscula: `PlanesHorizontal` → `planesHorizontal`). La interfaz del escaneo ahora se actualiza a 10 Hz para no saturar el teléfono.
 
 **Verificación:** pruebas unitarias con recorridos simulados (ruido 1 cm): sala 4,20 × 3,60 → esquinas a ≤ 3 cm, área y perímetro con error < 2 %; habitación girada 30°; trapecio de 5 paredes. Prueba en dispositivo: PR-02 con el modo automático.
+
+### Ajuste de navegación (medición rápida)
+- Inicio muestra dos accesos principales: **Medir** (pantalla `/measure`, sin crear proyecto) y **Escanear habitación**.
+- `/measure`: modo **Objeto (auto)** — la cara superior de un objeto se detecta como plano horizontal y se calculan largo, ancho (rectángulo mínimo del contorno) y alto (plano − piso), `src/lib/objectDetect.ts`; modo **Distancia A–B** con lectura en vivo. Selector m / cm. Cada valor con ± y confiabilidad (RNF-15). Las medidas rápidas no se guardan.
+
+## CR-03 — Identificación de objetos con IA (en línea)
+- **RF-19 (Media)**: en «Medir», con conexión y sesión iniciada, el interruptor «IA: activada/desactivada» analiza la cámara en tiempo real (una consulta a la vez, cada ~2,5 s) y dibuja en pantalla el recuadro y el nombre del objeto. Cada consulta toma la imagen de la cámara AR, la reduce a 768 px (JPEG) y la envía a la Edge Function `identify` de Supabase, que consulta un modelo de visión (Claude) y devuelve objeto, categoría, certeza, descripción y consejo de medición. El nombre se dibuja sobre el objeto en AR.
+- Sin conexión o sin sesión el botón se desactiva con un aviso; la medición no depende de la IA (CR-01 offline primero se mantiene).
+- Privacidad (Ley 1581): consentimiento explícito antes del primer envío en cada sesión de la app; la imagen no se guarda en DIMENSIONA ni en Supabase; la captura temporal se borra. La clave de la API vive solo como secreto de la función (`ANTHROPIC_API_KEY`), nunca en la app. La función exige JWT.
+- Riesgos: costo por consulta (se dispara solo a pedido), latencia de 2–6 s, errores de reconocimiento (se muestra la certeza).
+
+## CR-04 — Reconocimiento de objetos en el teléfono + profundidad
+- **RF-20 (Alta)**: en «Medir» (modo Objeto), un detector YOLOE corre **en el teléfono, sin internet** (`ViroObjectDetector` + `@reactvision/react-viro-onnx`), con ~60 clases de interiores (muebles, electrodomésticos, puertas, ventanas…; lista en `scripts/export_yoloe.py`, nombres es-CO en `src/lib/objectLabels.ts`). Dibuja recuadro y nombre de cada objeto; el del centro se resalta. Interruptor «Reconocer objetos» (activado por defecto). No reconoce personas (privacidad).
+- **RF-21 (Media)**: medida aproximada del objeto principal: con la API de profundidad de ARCore (`depthEnabled`) se consultan 5 puntos 3D dentro del recuadro y se estiman ancho y alto (`src/lib/boxMeasure.ts`). Se muestra como «≈» con confiabilidad parcial (P = punto suelto). Si un punto cae en el fondo, esa medida se descarta.
+- La medida exacta de superficies planas (RF-03, caja 3D) y la IA en la nube (CR-03) se mantienen.
+- Limitaciones: el recuadro es 2D (ancho y alto visibles, no profundidad del objeto); la profundidad requiere un teléfono compatible con ARCore Depth; el modelo agrega ~10–15 MB al APK.
+
+## CR-05 — Medición precisa a pedido (tocar para medir)
+- En «Medir» (modo Objeto) todos los objetos reconocidos muestran su nombre; **las medidas solo aparecen al tocar** un objeto o una superficie (piso, pared, techo, mesa). Botón «Quitar» para deseleccionar.
+- **Objeto tocado**: malla de 16 puntos 3D dentro del recuadro, descarte de puntos del fondo (profundidad distinta a la mediana), escala metros/dp por mediana de pares y mediana temporal de 7 lecturas (mínimo 3 antes de mostrar). `src/lib/boxMeasure.ts` (`measureFromGrid`, `smoothMeasures`), con pruebas (error ≤ 0,01 % en simulación).
+- Confiabilidad del objeto: parcial, penalizada por la dispersión de la escala (RF-09). Superficies planas: medida del plano de ARCore.
+- ⚙ Opciones muestra si el teléfono admite la profundidad de ARCore y si la calibración de pantalla está lista.
+- Límite conocido: ancho y alto son los visibles desde la cámara (no el fondo del objeto); el plano de ARCore crece al recorrerlo, así que una superficie puede medir menos hasta verla completa. Para la máxima precisión: Distancia A–B.
