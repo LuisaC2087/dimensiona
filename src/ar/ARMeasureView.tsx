@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/refs, react-hooks/immutability -- puente con Viro: callbacks y refs nativos se actualizan en cada render a propósito */
 /**
  * Capa AR (única que importa ViroReact). Expone al resto de la app un punto en la retícula
  * con los datos que necesita la confiabilidad (RF-03, RF-04, RF-09).
@@ -178,15 +179,15 @@ const closed = (pts: Point2[], y = LIFT) => [...pts, pts[0]].map((p) => l3(p, y)
 const mid = (a: Point2, b: Point2): Point2 => ({ x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 });
 const lenOf = (a: Point2, b: Point2) => Math.hypot(a.x - b.x, a.z - b.z);
 
-const PILL_H = 0.045; // alto de la etiqueta (m)
+const PILL_H = 0.035; // alto de la etiqueta (m)
 /** Etiqueta tipo píldora que siempre mira a la cámara. */
 function Pill({ at, text, kind = 'accent' }: { at: [number, number, number]; text: string; kind?: 'accent' | 'info' }) {
-  const w = 0.03 + text.length * 0.019;
+  const w = 0.03 + text.length * 0.016;
   return (
     <ViroNode position={at} transformBehaviors={['billboard']}>
       <ViroQuad width={w} height={PILL_H} materials={[kind === 'accent' ? 'pillAccent' : 'pillInfo']} />
       <ViroText text={text} position={[0, 0, 0.002]} scale={[0.1, 0.1, 0.1]} width={w * 10} height={PILL_H * 10}
-        style={{ fontFamily: 'Arial', fontSize: 22, fontWeight: '700', color: kind === 'accent' ? '#0B0B0C' : '#FFFFFF', textAlign: 'center', textAlignVertical: 'center' }} />
+        style={{ fontFamily: 'Arial', fontSize: 16, fontWeight: '700', color: kind === 'accent' ? '#0B0B0C' : '#FFFFFF', textAlign: 'center', textAlignVertical: 'center' }} />
     </ViroNode>
   );
 }
@@ -281,7 +282,7 @@ export function ARMeasureView(props: AppProps & {
         const ask = n?.arSceneNavigator?.isDepthOcclusionSupported ?? n?._isDepthOcclusionSupported;
         const r = await ask?.();
         dbg('depth', `profundidad ARCore: ${JSON.stringify(r)} (método ${ask ? 'encontrado' : 'NO encontrado'})`, 0);
-        dbg('onnx', `módulo ViroONNX nativo: ${NativeModules.ViroONNX ? 'presente' : 'AUSENTE'}`, 0);
+        dbg('onnx', `módulo ViroONNX nativo: ${NativeModules.ViroONNX ? 'presente' : 'AUSENTE'} · ORT ${(() => { try { return NativeModules.ViroONNX?.getVersion?.() ?? '?'; } catch { return 'error'; } })()}`, 0);
         if (r) onDepth.current?.(!!r.supported);
       } catch { /* sin respuesta: no se informa */ }
     }, 2500);
@@ -320,7 +321,7 @@ export function ARMeasureView(props: AppProps & {
           style={{ position: 'absolute', width: 0, height: 0 }}
           model={OBJECT_MODEL}
           mode="prompt-free"
-          confidenceThreshold={0.35}
+          confidenceThreshold={0.2}
           maxFPS={8}
           maxDetections={6}
           projectToWorld={false}

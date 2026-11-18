@@ -6,13 +6,11 @@
 import { File } from 'expo-file-system';
 import { supabase } from '../cloud/supabase';
 
-export interface Identification {
-  objeto: string;
+export interface AIObject {
+  nombre: string;
   categoria: string;
   confianza: 'alta' | 'media' | 'baja';
-  descripcion: string;
-  consejo: string;
-  /** Recuadro normalizado (0..1) del objeto en la imagen; ancho 0 si no hay. */
+  /** Recuadro normalizado (0..1) en la imagen. */
   caja: { x: number; y: number; ancho: number; alto: number };
 }
 
@@ -30,12 +28,13 @@ async function toBase64(uri: string): Promise<{ data: string; mediaType: 'image/
 }
 
 const ERRORS: Record<string, string> = {
-  rate: 'Demasiadas consultas seguidas. Espera un momento.',
+  rate: 'Se alcanzó el límite gratuito de la IA. Espera un momento.',
+  nokey: 'La IA no está configurada en el servidor.',
   refusal: 'La IA no pudo analizar esta imagen.',
   image: 'La imagen es demasiado grande.',
 };
 
-export async function identifyImage(uri: string): Promise<Identification> {
+export async function identifyImage(uri: string): Promise<AIObject[]> {
   if (!supabase) throw new Error('La nube no está configurada.');
   const { data: b64, mediaType } = await toBase64(uri);
   try { new File(uri).delete(); } catch { /* la captura es temporal */ }
@@ -45,5 +44,6 @@ export async function identifyImage(uri: string): Promise<Identification> {
     try { code = (await (error as { context?: Response }).context?.json())?.error ?? ''; } catch { /* sin cuerpo */ }
     throw new Error(ERRORS[code] ?? 'No se pudo identificar el objeto. Revisa tu conexión.');
   }
-  return data as Identification;
+  const list = (data as { objetos?: AIObject[] })?.objetos;
+  return Array.isArray(list) ? list.filter((o) => o.caja && o.caja.ancho > 0 && o.caja.alto > 0) : [];
 }

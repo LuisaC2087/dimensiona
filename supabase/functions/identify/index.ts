@@ -1,34 +1,30 @@
-// Supabase Edge Function «identify» (CR-03): recibe una imagen de la cámara y devuelve qué objeto es.
-// La clave de Anthropic vive solo aquí (secreto ANTHROPIC_API_KEY), nunca en la app.
+// Supabase Edge Function «identify» (CR-03): recibe una imagen de la cámara y devuelve todos los
+// objetos y superficies con su recuadro. Usa Google Gemini (plan gratuito).
+// La clave vive solo aquí (secreto GEMINI_API_KEY), nunca en la app.
 // Requiere sesión: Supabase verifica el JWT antes de ejecutar (verify_jwt por defecto).
-import Anthropic from 'npm:@anthropic-ai/sdk';
 
-const client = new Anthropic(); // lee ANTHROPIC_API_KEY
+const KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
+const MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
 const MAX_B64 = 6_000_000; // ~4,5 MB de imagen
 
-const SYSTEM = `Eres el asistente de visión de DIMENSIONA, una app que mide espacios interiores.
-Recibes una foto de la cámara del teléfono; el centro de la imagen es donde apunta la persona
-(puede haber líneas amarillas o blancas dibujadas por la app: ignóralas).
-Identifica el objeto principal en el centro. Responde en español de Colombia, breve y concreto.
-Si no puedes distinguir un objeto, usa objeto "No identificado" y confianza "baja".
-No describas personas ni leas documentos, pantallas o datos personales que aparezcan.`;
+const PROMPT = `Eres el sistema de visión de DIMENSIONA, una app que mide espacios interiores con realidad aumentada.
+Ignora líneas, recuadros o etiquetas dibujados por la app sobre la foto.
+Detecta TODOS los objetos y superficies visibles que una persona podría querer medir: muebles, electrodomésticos,
+objetos sobre mesas (botellas, cajas, cintas, libros…), puertas, ventanas, paredes, piso, techo, mesas, repisas.
+Máximo 12, primero los más grandes y nítidos. Para cada uno da "box_2d" = [ymin, xmin, ymax, xmax] normalizado 0-1000,
+AJUSTADO al borde visible. Nombres cortos en español de Colombia. No describas personas ni leas documentos o pantallas.
+Si no hay nada reconocible, devuelve una lista vacía.`;
 
 const SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['objeto', 'categoria', 'confianza', 'descripcion', 'consejo', 'caja'],
-  properties: {
-    objeto: { type: 'string', description: 'Nombre corto del objeto, p. ej. «Mesa de comedor»' },
-    categoria: { type: 'string', enum: ['mueble', 'electrodoméstico', 'puerta', 'ventana', 'pared', 'piso', 'techo', 'decoración', 'otro'] },
-    confianza: { type: 'string', enum: ['alta', 'media', 'baja'] },
-    descripcion: { type: 'string', description: 'Una frase: material, color o forma' },
-    consejo: { type: 'string', description: 'Una frase sobre cómo medirlo mejor con la app' },
-    caja: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['x', 'y', 'ancho', 'alto'],
-      description: 'Recuadro del objeto en la imagen, normalizado 0..1 desde la esquina superior izquierda. Todo 0 si no hay objeto.',
-      properties: { x: { type: 'number' }, y: { type: 'number' }, ancho: { type: 'number' }, alto: { type: 'number' } },
+  type: 'ARRAY',
+  items: {
+    type: 'OBJECT',
+    required: ['nombre', 'categoria', 'confianza', 'box_2d'],
+    properties: {
+      nombre: { type: 'STRING' },
+      categoria: { type: 'STRING', enum: ['objeto', 'mueble', 'electrodoméstico', 'puerta', 'ventana', 'pared', 'piso', 'techo', 'superficie'] },
+      confianza: { type: 'STRING', enum: ['alta', 'media', 'baja'] },
+      box_2d: { type: 'ARRAY', items: { type: 'NUMBER' } },
     },
   },
 };
@@ -36,8 +32,11 @@ const SCHEMA = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
+const clamp = (v: number) => Math.min(1, Math.max(0, v / 1000));
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method' }, 405);
+  if (!KEY) return json({ error: 'nokey' }, 500);
   let image: string, mediaType: string;
   try {
     ({ image, mediaType } = await req.json());
@@ -48,28 +47,33 @@ Deno.serve(async (req) => {
   if (mediaType !== 'image/jpeg' && mediaType !== 'image/png') return json({ error: 'mediaType' }, 400);
 
   try {
-    const response = await client.beta.messages.create({
-      model: 'claude-opus-5-5',
-      max_tokens: 2000,
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
-      system: SYSTEM,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } },
-          { type: 'text', text: '¿Qué objeto hay en el centro de la imagen?' },
-        ],
-      }],
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': KEY },
+      body: JSON.stringify({
+        contents: [{ parts: [{ inline_data: { mime_type: mediaType, data: image } }, { text: PROMPT }] }],
+        generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.2 },
+      }),
     });
-    if (response.stop_reason === 'refusal') return json({ error: 'refusal' }, 422);
-    const text = response.content.find((b) => b.type === 'text');
-    if (!text || text.type !== 'text') return json({ error: 'empty' }, 502);
-    return json(JSON.parse(text.text));
-  } catch (e) {
-    if (e instanceof Anthropic.RateLimitError) return json({ error: 'rate' }, 429);
-    if (e instanceof Anthropic.APIError) return json({ error: 'api', status: e.status }, 502);
+    if (r.status === 429) return json({ error: 'rate' }, 429);
+    if (!r.ok) return json({ error: 'api', status: r.status }, 502);
+    const out = await r.json();
+    const text = out?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text;
+    if (!text) return json({ error: 'refusal' }, 422);
+    const list = JSON.parse(text) as { nombre: string; categoria: string; confianza: string; box_2d: number[] }[];
+    const objetos = list
+      .filter((o) => Array.isArray(o.box_2d) && o.box_2d.length === 4)
+      .slice(0, 12)
+      .map((o) => {
+        const [y0, x0, y1, x1] = o.box_2d;
+        return {
+          nombre: o.nombre, categoria: o.categoria, confianza: o.confianza,
+          caja: { x: clamp(x0), y: clamp(y0), ancho: clamp(x1) - clamp(x0), alto: clamp(y1) - clamp(y0) },
+        };
+      })
+      .filter((o) => o.caja.ancho > 0 && o.caja.alto > 0);
+    return json({ objetos });
+  } catch {
     return json({ error: 'unknown' }, 500);
   }
 });

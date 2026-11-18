@@ -16,7 +16,7 @@ import {
 } from '../lib';
 import { useAppState } from '../state/AppState';
 import { useCloud } from '../state/CloudState';
-import { identifyImage, type Identification } from '../ai/identify';
+import { identifyImage, type AIObject } from '../ai/identify';
 import { Button, Disclaimer, ReliabilityChip, s } from '../components/ui';
 import { DetectionOverlay } from '../components/DetectionOverlay';
 import { useObjectRecognition } from '../state/useObjectRecognition';
@@ -30,7 +30,7 @@ interface Result { label: string; valueM: number; score: number }
 const TRACK_LABEL: Record<TrackingState, string> = { good: 'Bueno', limited: 'Limitado', lost: 'Perdido' };
 const TRACK_COLOR: Record<TrackingState, string> = { good: colors.ok, limited: colors.warn, lost: colors.danger };
 const UI_HZ_MS = 100;
-const AI_PERIOD_MS = 2500;
+const AI_PERIOD_MS = 5000; // plan gratuito de Gemini: ~12 consultas por minuto
 let aiConsent = false; // consentimiento por sesión de la app (Ley 1581: la imagen sale del teléfono)
 
 export default function Measure() {
@@ -48,16 +48,16 @@ export default function Measure() {
   const planes = useRef(new Map<string, DetectedPlane>());
   const captureRef = useRef<CaptureFn | null>(null);
   const cloud = useCloud();
-  const [ai, setAi] = useState<{ busy: boolean; result: Identification | null; error: string | null; at: number }>({ busy: false, result: null, error: null, at: 0 });
+  const [ai, setAi] = useState<{ busy: boolean; result: AIObject[] | null; error: string | null; at: number }>({ busy: false, result: null, error: null, at: 0 });
   const [aiOn, setAiOn] = useState(false);
   const [screen, setScreen] = useState({ w: 0, h: 0 });
   const aiReady = cloud.configured && cloud.online && cloud.signedIn;
   // CR-04: reconocimiento en el teléfono (sin internet), activado por defecto
-  const [recogOn, setRecogOn] = useState(true);
   const [showOptions, setShowOptions] = useState(false);
   const [depthOk, setDepthOk] = useState<boolean | null>(null);
   const hitTestRef = useRef<HitTestFn | null>(null);
   const lastUi = useRef(0);
+  const recogOn = aiOn; // el reconocimiento lo hace la IA en la nube
   const recog = useObjectRecognition({ enabled: recogOn && mode === 'object', hitTestRef, reticle, screen });
 
   useEffect(() => {
@@ -86,7 +86,16 @@ export default function Measure() {
 
   // Superficie seleccionada al tocarla (piso, pared, mesa…). Las medidas se muestran solo a pedido.
   const selPlane = mode === 'object' && selPlaneId ? planes.current.get(selPlaneId) ?? null : null;
-  const selPlaneHeight = selPlane && selPlane.kind === 'floor' && floorY != null && selPlane.y - floorY >= 0.05 ? selPlane.y - floorY : null;
+  // Altura sobre la superficie que lo sostiene (mesa, repisa…); si no hay ninguna debajo, sobre el piso.
+  let baseY: number | null = floorY;
+  if (selPlane && selPlane.kind === 'floor') {
+    for (const pl of planes.current.values()) {
+      if (pl.kind !== 'floor' || pl.id === selPlane.id || pl.y > selPlane.y - 0.03) continue;
+      if (Math.hypot(selPlane.cx - pl.cx, selPlane.cz - pl.cz) > Math.hypot(pl.lengthM, pl.widthM) / 2) continue;
+      if (baseY == null || pl.y > baseY) baseY = pl.y;
+    }
+  }
+  const selPlaneHeight = selPlane && selPlane.kind === 'floor' && baseY != null && selPlane.y - baseY >= 0.03 ? selPlane.y - baseY : null;
 
   // Distancia en vivo A → retícula
   const liveDist = mode === 'distance' && points.length === 1 && reticle ? distance3(points[0].p, reticle.position) : null;
@@ -102,7 +111,7 @@ export default function Measure() {
       const l = selPlane.lengthM, w = selPlane.widthM;
       object = {
         planeId: selPlane.id, rect: selPlane.rect, lengthLabel: fmt(l), widthLabel: fmt(w),
-        drop: selPlaneHeight != null && floorY != null ? { dy: floorY - selPlane.pose.position[1], label: `H=${fmt(selPlaneHeight)}` } : null,
+        drop: selPlaneHeight != null && baseY != null ? { dy: baseY - selPlane.pose.position[1], label: `H=${fmt(selPlaneHeight)}` } : null,
         info: [
           ...(selPlaneHeight != null ? [`V=${formatVolume(l * w * selPlaneHeight, settings.decimals)}`] : []),
           `S=${formatArea(l * w, settings.decimals)}`,
@@ -112,7 +121,7 @@ export default function Measure() {
     const surfaces = [...planes.current.values()].filter((p) => p.id !== object?.planeId).map((p) => ({ id: p.id, outline: p.outline }));
     return { points: pts, segments: segs, draft: mode === 'distance' ? reticle?.position ?? null : null, object, surfaces };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, reticle, mode, floorY, selPlane, selPlaneHeight, unit, settings.decimals, planeTick]);
+  }, [points, reticle, mode, baseY, selPlane, selPlaneHeight, unit, settings.decimals, planeTick]);
 
   const switchMode = (m: Mode) => { setMode(m); setPoints([]); setFrozen(null); setSelPlaneId(null); recog.clear(); setMessage(null); };
 
@@ -152,6 +161,30 @@ export default function Measure() {
     })();
     return () => { alive = false; };
   }, [aiOn, aiReady]);
+
+  // La IA en la nube es el detector: sus recuadros se miden con la malla 3D de ARCore (CR-05).
+  const aiFeeds = aiOn && mode === 'object';
+  const recogOnDetections = recog.onDetections;
+  useEffect(() => {
+    if (!aiFeeds || !screen.w || !ai.result) return;
+    recogOnDetections(ai.result.map((o) => ({
+      label: o.nombre,
+      confidence: o.confianza === 'alta' ? 0.9 : o.confianza === 'media' ? 0.6 : 0.3,
+      box: { x: o.caja.x * screen.w, y: o.caja.y * screen.h, width: o.caja.ancho * screen.w, height: o.caja.alto * screen.h },
+    })));
+  }, [aiFeeds, ai.result, screen, recogOnDetections]);
+
+  // Pide el consentimiento al entrar (una vez por sesión) y activa la IA en cuanto haya conexión.
+  useEffect(() => {
+    if (!aiReady || aiOn) return;
+    if (aiConsent) { setAiOn(true); return; }
+    Alert.alert(
+      'Reconocer objetos con IA',
+      'Para reconocer los objetos se enviarán imágenes de la cámara (cada pocos segundos) a Google Gemini (IA). No se guardan en DIMENSIONA, pero Google puede usarlas para mejorar su servicio gratuito. Evita enfocar personas o documentos.',
+      [{ text: 'Ahora no', style: 'cancel' }, { text: 'Activar', onPress: () => { aiConsent = true; setAiOn(true); } }],
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiReady]);
 
   const toggleAi = () => {
     if (aiOn) { setAiOn(false); setAi({ busy: false, result: null, error: null, at: 0 }); return; }
@@ -207,14 +240,17 @@ export default function Measure() {
       resultText = `${name} · midiendo… mantén el teléfono quieto`;
     }
   } else if (selPlane) {
-    const kind = selPlane.kind === 'wall' ? 'Pared' : selPlane.kind === 'ceiling' ? 'Techo' : selPlaneHeight != null ? 'Superficie' : 'Piso';
+    const kind = selPlane.kind === 'wall' ? (selPlane.lengthM >= 1 ? 'Pared' : 'Superficie vertical') : selPlane.kind === 'ceiling' ? 'Techo' : selPlaneHeight != null ? 'Superficie' : 'Piso';
     resultText = `${kind} ≈ ${fmt(selPlane.lengthM)} × ${fmt(selPlane.widthM)}${selPlaneHeight != null ? ` · alto ${fmt(selPlaneHeight)}` : ''}`;
     resultScore = computeReliability({ tracking, surface: 'plane', cameraDistanceM: camDist(selPlane) }).score;
   }
   const hasSelection = !!recog.selected || !!selPlane;
 
   const hint = mode === 'object'
-    ? (planes.current.size === 0 && recog.items.length === 0 ? 'Mueve el teléfono despacio para detectar' : 'Toca un objeto o una superficie para medirlo')
+    ? (aiOn && ai.error ? `IA: ${ai.error}`
+      : !aiReady ? (!cloud.online ? 'Sin internet: solo se reconocen superficies' : 'Inicia sesión para reconocer objetos')
+      : aiOn && !ai.result ? 'Reconociendo objetos…'
+      : planes.current.size === 0 && recog.items.length === 0 ? 'Mueve el teléfono despacio para detectar' : 'Toca un objeto o una superficie para medirlo')
     : points.length === 0 ? 'Apunta al punto A' : points.length === 1 ? 'Apunta al punto B' : '';
 
   const reset = () => {
@@ -226,18 +262,11 @@ export default function Measure() {
     <View style={s.screen} onLayout={(e) => setScreen({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
       <ARMeasureView callbacks={callbacks} drawing={drawing} resetSignal={resetSignal} captureRef={captureRef}
         hitTestRef={hitTestRef} screenSize={screen}
-        onDetections={recogOn && mode === 'object' ? recog.onDetections : undefined} onDetectorError={recog.onError} onDepthSupport={setDepthOk} />
+        onDetectorError={recog.onError} onDepthSupport={setDepthOk} />
       {recogOn && mode === 'object' && <DetectionOverlay items={recog.items} />}
       {mode === 'object' && (
         <Pressable accessibilityLabel="Toca un objeto o una superficie para medirlo" style={{ position: 'absolute', inset: 0 }}
           onPress={(e) => { void onTap(e.nativeEvent.locationX, e.nativeEvent.locationY); }} />
-      )}
-      {aiOn && !recogOn && ai.result && ai.result.caja.ancho > 0 && screen.w > 0 && (
-        <View pointerEvents="none" style={{
-          position: 'absolute', borderWidth: 2, borderColor: colors.accent, borderRadius: 10,
-          left: ai.result.caja.x * screen.w, top: ai.result.caja.y * screen.h,
-          width: ai.result.caja.ancho * screen.w, height: ai.result.caja.alto * screen.h,
-        }} />
       )}
       {mode === 'distance' && (
         <View pointerEvents="none" style={{ position: 'absolute', top: '50%', left: '50%', width: 28, height: 28, marginLeft: -14, marginTop: -14, borderWidth: 2, borderColor: reticle ? colors.accent : 'rgba(255,255,255,0.6)', borderRadius: 14 }} />
@@ -274,18 +303,15 @@ export default function Measure() {
 
           {showOptions && (
             <View style={[glass, { padding: space.sm, gap: space.sm, borderRadius: 16 }]}>
-              <Button label={recogOn ? '👁 Reconocer objetos: sí' : '👁 Reconocer objetos: no'} variant={recogOn ? 'primary' : 'secondary'}
-                onPress={() => setRecogOn((v) => !v)} />
-              {recogOn && recog.error && <Text style={{ color: colors.warn, fontSize: 14 }}>No disponible: {recog.error}</Text>}
               <Text style={s.muted}>
                 Sensor de profundidad: {depthOk == null ? 'comprobando…' : depthOk ? 'disponible (medidas de objetos más precisas)' : 'no disponible en este teléfono: las medidas de objetos son menos precisas; usa Distancia A–B'}
                 {' · '}Calibración de pantalla: {recog.calibrated ? 'lista' : 'pendiente (apunta al piso unos segundos)'}
               </Text>
               {cloud.configured && (
                 <>
-                  <Button label={aiOn ? '🤖 IA en la nube: sí' : '🤖 IA en la nube: no'} variant={aiOn ? 'primary' : 'secondary'}
+                  <Button label={aiOn ? '👁 Reconocer objetos (IA): sí' : '👁 Reconocer objetos (IA): no'} variant={aiOn ? 'primary' : 'secondary'}
                     disabled={!aiReady && !aiOn} onPress={toggleAi} />
-                  {aiOn && ai.result && <Text style={s.muted} numberOfLines={2}>{ai.result.objeto} · {ai.result.descripcion}</Text>}
+                  {aiOn && ai.result && <Text style={s.muted} numberOfLines={2}>{ai.result.length} reconocidos: {ai.result.map((o) => o.nombre).join(', ')}</Text>}
                   {aiOn && ai.error && <Text style={{ color: colors.warn, fontSize: 14 }}>{ai.error}</Text>}
                   {!aiReady && <Text style={s.muted}>{!cloud.online ? 'Sin conexión' : 'Inicia sesión para usar la IA en la nube'}</Text>}
                 </>
