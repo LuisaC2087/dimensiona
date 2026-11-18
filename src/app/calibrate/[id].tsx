@@ -7,6 +7,16 @@ import { useAppState } from '../../state/AppState';
 import { Button, Card, s } from '../../components/ui';
 import { colors, minTouch, space } from '../../theme';
 
+function RefOption({ label, detail, selected, onPress }: { label: string; detail?: string; selected: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected }}
+      style={{ minHeight: minTouch, padding: space.md, borderRadius: 12, backgroundColor: selected ? colors.accent : colors.surface }}>
+      <Text style={{ color: selected ? colors.onAccent : colors.text, fontSize: 16, fontWeight: '700' }}>{label}</Text>
+      {detail && <Text style={{ color: selected ? colors.onAccent : colors.textMuted, fontSize: 14 }}>{detail}</Text>}
+    </Pressable>
+  );
+}
+
 export default function Calibrate() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { compat } = useAppState();
@@ -25,14 +35,6 @@ export default function Calibrate() {
     router.replace(`/scan/${id}?mode=reference&realM=${realM}`);
   };
 
-  const Option = ({ value, label, detail }: { value: string; label: string; detail?: string }) => (
-    <Pressable onPress={() => setSel(value)} accessibilityRole="radio" accessibilityState={{ selected: sel === value }}
-      style={{ minHeight: minTouch, padding: space.md, borderRadius: 12, backgroundColor: sel === value ? colors.accent : colors.surface }}>
-      <Text style={{ color: sel === value ? colors.onAccent : colors.text, fontSize: 16, fontWeight: '700' }}>{label}</Text>
-      {detail && <Text style={{ color: sel === value ? colors.onAccent : colors.textMuted, fontSize: 14 }}>{detail}</Text>}
-    </Pressable>
-  );
-
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.pad}>
       <Card>
@@ -40,8 +42,12 @@ export default function Calibrate() {
           La calibración corrige la escala de todo el proyecto. Mide un objeto cuya longitud conoces: marca sus dos extremos y la app calculará el factor k.
         </Text>
       </Card>
-      {REFERENCES.map((r) => <Option key={r.id} value={r.id} label={r.label} detail={formatLength(r.lengthM, 'cm', 4)} />)}
-      <Option value="manual" label="Otra longitud" detail="Escribe la medida real en centímetros" />
+      {REFERENCES.map((r) => (
+        <RefOption key={r.id} label={r.label} detail={formatLength(r.lengthM, 'cm', 4)}
+          selected={sel === r.id} onPress={() => setSel(r.id)} />
+      ))}
+      <RefOption label="Otra longitud" detail="Escribe la medida real en centímetros"
+        selected={sel === 'manual'} onPress={() => setSel('manual')} />
       {sel === 'manual' && (
         <TextInput value={manual} onChangeText={setManual} keyboardType="decimal-pad" placeholder="Ej.: 120,5"
           placeholderTextColor={colors.textMuted}

@@ -180,6 +180,7 @@ export default function Measure() {
         if (!best || pl.lengthM * pl.widthM < best.lengthM * best.widthM) best = pl;
       }
     }
+    if (__DEV__) console.log(`[DIAG] toque: punto=${p ? `${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}` : 'NINGUNO'} planos=${planes.current.size} objetos=${recog.items.length} elegido=${best?.kind ?? 'ninguno'}`);
     setSelPlaneId(best?.id ?? null);
     if (!best) setMessage('Ahí no hay un objeto ni una superficie detectada todavía. Mueve el teléfono despacio y vuelve a tocar.');
   };

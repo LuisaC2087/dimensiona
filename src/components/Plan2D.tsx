@@ -1,7 +1,7 @@
 /** RF-08: plano en planta con paredes numeradas, cotas, área y barra de escala. */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { G, Line, Polygon, Text as SvgText, Circle, Rect } from 'react-native-svg';
+import Svg, { G, Polygon, Text as SvgText, Circle, Rect } from 'react-native-svg';
 import { formatArea, formatLength, type Point2, type Unit } from '../lib';
 import { colors } from '../theme';
 
@@ -33,12 +33,18 @@ export function Plan2D({ corners, walls, areaM2, unit, decimals, height = 340 }:
     return { pts, scale, cx, cy, barM: niceScale(Math.max(spanX, spanZ)) };
   }, [corners, width, height]);
 
-  const responder = useMemo(() => PanResponder.create({
+  // Valores vigentes de zoom y desplazamiento para el gesto (sin recrear el PanResponder).
+  const view = useRef({ zoom: 1, pan: { x: 0, y: 0 } });
+  useEffect(() => { view.current = { zoom, pan }; }, [zoom, pan]);
+
+  // Los manejadores del gesto se ejecutan fuera del render; el compilador no lo distingue.
+  // eslint-disable-next-line react-hooks/refs
+  const [responder] = useState(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onPanResponderGrant: (e) => {
       const t = e.nativeEvent.touches;
-      gesture.current.startZoom = zoom;
-      gesture.current.startPan = pan;
+      gesture.current.startZoom = view.current.zoom;
+      gesture.current.startPan = view.current.pan;
       gesture.current.startDist = t.length === 2 ? Math.hypot(t[0].pageX - t[1].pageX, t[0].pageY - t[1].pageY) : 0;
     },
     onPanResponderMove: (e, g) => {
@@ -51,7 +57,7 @@ export function Plan2D({ corners, walls, areaM2, unit, decimals, height = 340 }:
         setPan({ x: gesture.current.startPan.x + g.dx, y: gesture.current.startPan.y + g.dy });
       }
     },
-  }), [zoom, pan]);
+  }));
 
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
   const { pts, scale, cx, cy, barM } = geo;

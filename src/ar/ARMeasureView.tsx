@@ -87,6 +87,16 @@ const p3 = (a: number[]): Point3 => ({ x: a[0], y: a[1], z: a[2] });
 
 const PLANE_TYPES = new Set(['ExistingPlaneUsingExtent', 'ExistingPlane', 'EstimatedHorizontalPlane']);
 
+// DIAGNÓSTICO TEMPORAL: registros en Metro (solo desarrollo), limitados por clave.
+const dbgLast = new Map<string, number>();
+function dbg(key: string, msg: string, everyMs = 2000) {
+  if (!__DEV__) return;
+  const t = Date.now();
+  if (t - (dbgLast.get(key) ?? 0) < everyMs) return;
+  dbgLast.set(key, t);
+  console.log(`[DIAG] ${msg}`);
+}
+
 function mapTracking(state: number): TrackingState {
   return state === TS.TRACKING_NORMAL ? 'good' : state === TS.TRACKING_LIMITED ? 'limited' : 'lost';
 }
@@ -110,6 +120,7 @@ function MeasureScene(props: { arSceneNavigator: { viroAppProps: AppProps } }) {
     // Preferir planos detectados sobre puntos de características (factor P).
     const results = [...e.hitTestResults].sort((a, b) => Number(PLANE_TYPES.has(b.type)) - Number(PLANE_TYPES.has(a.type)));
     const r = results[0];
+    dbg('hit', `retícula: ${e.hitTestResults.length} resultados [${e.hitTestResults.map((h) => h.type).join(', ')}]`, 3000);
     if (!r) return cb.current.onReticle(null);
     const pos = p3(r.transform.position as unknown as number[]);
     cb.current.onReticle({
@@ -122,6 +133,7 @@ function MeasureScene(props: { arSceneNavigator: { viroAppProps: AppProps } }) {
 
   // Altas y actualizaciones de planos: ARCore refina su posición con el tiempo.
   const onAnchor = (a: ViroAnchor) => {
+    dbg('anchor' + a.anchorId, `ancla ${a.anchorId} tipo=${a.type} alineación=${a.alignment} ${(a.width ?? 0).toFixed(2)}×${(a.height ?? 0).toFixed(2)} m vértices=${a.vertices?.length ?? 0}`, 5000);
     if (a.type !== 'plane' || !a.alignment) return;
     const kind = a.alignment === 'Vertical' ? 'wall' : a.alignment === 'HorizontalDownward' ? 'ceiling' : 'floor';
     const verts = (a.vertices ?? []).map((q) => ({ x: q[0], z: q[2] }));
@@ -142,7 +154,7 @@ function MeasureScene(props: { arSceneNavigator: { viroAppProps: AppProps } }) {
     <ViroARScene
       ref={(r) => { sceneRef.current = r; }}
       anchorDetectionTypes={['planesHorizontal', 'planesVertical']}
-      onTrackingUpdated={(s, r) => cb.current.onTracking(mapTracking(s), mapCause(r))}
+      onTrackingUpdated={(s, r) => { dbg('track' + s + r, `seguimiento=${mapTracking(s)} causa=${mapCause(r)}`, 1000); cb.current.onTracking(mapTracking(s), mapCause(r)); }}
       onCameraARHitTest={onHit}
       onAnchorFound={onAnchor}
       onAnchorUpdated={onAnchor}
@@ -238,6 +250,7 @@ const hitTestScreen: HitTestFn = async (x, y) => {
   try {
     const res: any[] = (await sceneRef.current?.performARHitTestWithPoint?.(x, y)) ?? [];
     const best = [...res].sort((a, b) => (HIT_PRIORITY[a.type] ?? 9) - (HIT_PRIORITY[b.type] ?? 9))[0];
+    dbg('probe', `toque (${x.toFixed(0)}, ${y.toFixed(0)}): ${res.length} resultados [${res.map((h) => h.type).join(', ')}]`, 300);
     return best ? p3(best.transform.position) : null;
   } catch { return null; }
 };
@@ -267,6 +280,8 @@ export function ARMeasureView(props: AppProps & {
         const n = nav.current;
         const ask = n?.arSceneNavigator?.isDepthOcclusionSupported ?? n?._isDepthOcclusionSupported;
         const r = await ask?.();
+        dbg('depth', `profundidad ARCore: ${JSON.stringify(r)} (método ${ask ? 'encontrado' : 'NO encontrado'})`, 0);
+        dbg('onnx', `módulo ViroONNX nativo: ${NativeModules.ViroONNX ? 'presente' : 'AUSENTE'}`, 0);
         if (r) onDepth.current?.(!!r.supported);
       } catch { /* sin respuesta: no se informa */ }
     }, 2500);
@@ -309,7 +324,9 @@ export function ARMeasureView(props: AppProps & {
           maxFPS={8}
           maxDetections={6}
           projectToWorld={false}
+          onReady={() => dbg('detready', 'detector listo (modelo cargado)', 0)}
           onDetection={(e) => {
+            dbg('det', `detector: ${e.detections.length} objetos [${e.detections.map((d) => `${d.label} ${(d.confidence * 100).toFixed(0)}%`).join(', ')}]`, 3000);
             const s = props.screenSize;
             onDet.current?.(e.detections.map((d) => ({
               label: d.label,
@@ -319,7 +336,7 @@ export function ARMeasureView(props: AppProps & {
                 : { x: 0, y: 0, width: 0, height: 0 }),
             })));
           }}
-          onError={(e) => props.onDetectorError?.(e.error)}
+          onError={(e) => { dbg('deterr', `detector ERROR: ${e.error}`, 0); props.onDetectorError?.(e.error); }}
         />
       )}
     </View>

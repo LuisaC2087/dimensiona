@@ -32,6 +32,7 @@ export default function ProjectScreen() {
   const { revision } = useCloud();
 
   const load = useCallback(async () => {
+    void revision; // recargar cuando la nube trae cambios
     const [p, c, m] = await Promise.all([getProject(db, id), getCorners(db, id), listMeasurements(db, id)]);
     setProject(p); setCorners(c); setMeasurements(m);
   }, [db, id, revision]);

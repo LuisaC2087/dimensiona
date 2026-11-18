@@ -38,8 +38,10 @@ export function useObjectRecognition(opts: {
   const scale = useRef<number | null>(null); // dp → unidades que espera el hit test
   const sel = useRef<{ label: string; at: { x: number; y: number } } | null>(null);
   const history = useRef<GridMeasure[]>([]);
+  const [hasSelection, setHasSelection] = useState(false);
+  const [calibrated, setCalibrated] = useState(false);
   const reticleRef = useRef(reticle);
-  reticleRef.current = reticle;
+  useEffect(() => { reticleRef.current = reticle; }, [reticle]);
 
   /** Sigue al objeto seleccionado entre cuadros: misma etiqueta y el recuadro más cercano al anterior. */
   const trackSelected = useCallback((dets: Detection[]): number => {
@@ -70,7 +72,7 @@ export function useObjectRecognition(opts: {
   }, [publish]);
 
   const clear = useCallback(() => {
-    sel.current = null; history.current = []; setMeasure(null); setReadings(0); publish(latest.current);
+    sel.current = null; setHasSelection(false); history.current = []; setMeasure(null); setReadings(0); publish(latest.current);
   }, [publish]);
 
   /** Toque en pantalla: selecciona el objeto más pequeño que contiene el punto. Devuelve si acertó. */
@@ -79,6 +81,7 @@ export function useObjectRecognition(opts: {
       .sort((a, b) => a.box.width * a.box.height - b.box.width * b.box.height)[0];
     history.current = []; setMeasure(null); setReadings(0);
     sel.current = hit ? { label: hit.label, at: center(hit.box) } : null;
+    setHasSelection(!!hit);
     publish(latest.current);
     return !!hit;
   }, [publish]);
@@ -90,13 +93,16 @@ export function useObjectRecognition(opts: {
     if (!hit) return;
     const cx = screen.w / 2, cy = screen.h / 2, pr = PixelRatio.get();
     Promise.all([1, pr].map(async (s) => ({ scale: s, hit: await hit(cx * s, cy * s) })))
-      .then((c) => { scale.current = pickScale(c, reticle.position) ?? scale.current; })
+      .then((c) => {
+        scale.current = pickScale(c, reticle.position) ?? scale.current;
+        setCalibrated(scale.current != null);
+      })
       .catch(() => undefined);
   }, [enabled, reticle, screen, hitTestRef]);
 
   // Mide el objeto seleccionado: una lectura cada 400 ms, mediana de las últimas 7.
   useEffect(() => {
-    if (!enabled) { setItems([]); return; }
+    if (!enabled) return;
     let alive = true, busy = false;
     const timer = setInterval(async () => {
       const hit = hitTestRef.current, s = scale.current, cam = reticleRef.current?.cameraPosition;
@@ -126,10 +132,11 @@ export function useObjectRecognition(opts: {
     return (await hitTestRef.current?.(x * s, y * s)) ?? null;
   }, [hitTestRef]);
 
-  const selected = items.find((d) => d.selected) ?? null;
+  const visible = enabled ? items : [];
+  const selected = visible.find((d) => d.selected) ?? null;
   return {
-    items, selected, measure: selected ? measure : null, readings, error,
-    hasSelection: !!sel.current, calibrated: scale.current != null,
+    items: visible, selected, measure: selected ? measure : null, readings, error,
+    hasSelection, calibrated,
     onDetections, onError: setError, selectAt, clear, probe,
   };
 }

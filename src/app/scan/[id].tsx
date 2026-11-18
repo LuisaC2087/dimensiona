@@ -58,10 +58,13 @@ export default function Scan() {
   const [manualH, setManualH] = useState('');
   const [estimate, setEstimate] = useState<RoomEstimate | null>(null);
   const [sampleCount, setSampleCount] = useState(0);
-  const startedAt = useRef(Date.now());
+  const [startedAt, setStartedAt] = useState(() => Date.now());
   const lostSince = useRef<number | null>(null);
   const [lostLong, setLostLong] = useState(false);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  // Alturas de piso y techo derivadas de los planos (estado para poder usarlas al renderizar)
+  const [levels, setLevels] = useState<{ floor: number | null; ceiling: number | null }>({ floor: null, ceiling: null });
+  const [autoRel, setAutoRel] = useState<Reliability | null>(null);
 
   // Datos de alta frecuencia en refs (no provocan renders)
   const trackingRef = useRef<TrackingState>('limited');
@@ -70,7 +73,7 @@ export default function Scan() {
   const samples = useRef(new Map<string, Point3>());
   const stats = useRef({ n: 0, t: 0, plane: 0, dist: 0 });
   const modeRef = useRef(mode);
-  modeRef.current = mode;
+  useEffect(() => { modeRef.current = mode; }, [mode]);
 
   useEffect(() => {
     if (compat && !compat.canScan) router.replace('/compat');
@@ -124,20 +127,11 @@ export default function Scan() {
       const c = { floor: 0, wall: 0, ceiling: 0 };
       planes.current.forEach((x) => { c[x.kind] += 1; });
       setPlaneCount((prev) => (prev.floor === c.floor && prev.wall === c.wall && prev.ceiling === c.ceiling ? prev : c));
+      const floor = floorY();
+      const ceiling = floor == null ? null : ceilingY(floor);
+      setLevels((prev) => (prev.floor === floor && prev.ceiling === ceiling ? prev : { floor, ceiling }));
     },
-  }), []);
-
-  // CR-02: recalcular la habitación cada 0,7 s mientras se escanea
-  useEffect(() => {
-    if (mode !== 'auto') return;
-    const t = setInterval(() => {
-      setSampleCount(samples.current.size);
-      const f = floorY();
-      if (f == null || samples.current.size < 60) return;
-      setEstimate(estimateRoom([...samples.current.values()], f, ceilingY(f)));
-    }, 700);
-    return () => clearInterval(t);
-  }, [mode, floorY, ceilingY]);
+  }), [floorY, ceilingY]);
 
   const autoReliability = useCallback((fit: number): Reliability => {
     const st = stats.current;
@@ -152,10 +146,25 @@ export default function Scan() {
     return { ...base, score, level: score >= 75 ? 'Alta' : score >= 50 ? 'Media' : 'Baja' };
   }, []);
 
+  // CR-02: recalcular la habitación cada 0,7 s mientras se escanea
+  useEffect(() => {
+    if (mode !== 'auto') return;
+    const t = setInterval(() => {
+      setSampleCount(samples.current.size);
+      const f = floorY();
+      if (f == null || samples.current.size < 60) return;
+      const est = estimateRoom([...samples.current.values()], f, ceilingY(f));
+      setEstimate(est);
+      setAutoRel(est.corners ? autoReliability(est.fit) : null);
+    }, 700);
+    return () => clearInterval(t);
+  }, [mode, floorY, ceilingY, autoReliability]);
+
   const resetAuto = () => {
     samples.current.clear();
     stats.current = { n: 0, t: 0, plane: 0, dist: 0 };
     setEstimate(null);
+    setAutoRel(null);
     setSampleCount(0);
   };
 
@@ -243,13 +252,7 @@ export default function Scan() {
   }, [tracking.state, reticle, mode, points, db, id, realM]);
 
   // Altura automática a partir de los planos piso/techo (sin tocar puntos)
-  const autoHeight = useMemo(() => {
-    void planeCount;
-    const f = floorY();
-    if (f == null) return null;
-    const c = ceilingY(f);
-    return c == null ? null : c - f;
-  }, [planeCount, floorY, ceilingY]);
+  const autoHeight = levels.floor == null || levels.ceiling == null ? null : levels.ceiling - levels.floor;
 
   const saveAutoHeight = async () => {
     if (autoHeight == null) return;
@@ -282,7 +285,7 @@ export default function Scan() {
 
   const drawing = useMemo(() => {
     if (mode === 'auto') {
-      const f = floorY();
+      const f = levels.floor;
       const cs = estimate?.corners;
       if (!cs || f == null) return { points: [], segments: [], draft: reticle?.position ?? null };
       const ps = cs.map((c) => ({ x: c.x, y: f, z: c.z }));
@@ -292,10 +295,10 @@ export default function Scan() {
     const segs: [Point3, Point3][] = [];
     for (let i = 1; i < ps.length; i++) segs.push([ps[i - 1], ps[i]]);
     return { points: ps, segments: segs, draft: reticle?.position ?? null };
-  }, [mode, points, reticle, estimate, floorY]);
+  }, [mode, points, reticle, estimate, levels.floor]);
 
   const liveRel = reticle ? computeReliability({ tracking: tracking.state, surface: reticle.surface, cameraDistanceM: reticle.cameraDistanceM }) : null;
-  const noPlanesHint = planeCount.floor + planeCount.wall === 0 && now - startedAt.current > 20000;
+  const noPlanesHint = planeCount.floor + planeCount.wall === 0 && now - startedAt > 20000;
 
   const autoInstruction =
     planeCount.floor === 0 ? '1/3 · Apunta al piso y mueve el teléfono despacio hasta que se detecte.'
@@ -311,8 +314,6 @@ export default function Scan() {
               : points.length === 0 ? 'Apunta al techo para detectarlo, o toca «Marcar» en el piso' : 'Ahora apunta al techo, en la misma vertical';
 
   if (!compat?.canScan) return <View style={s.screen} />;
-
-  const autoRel = estimate?.corners ? autoReliability(estimate.fit) : null;
 
   return (
     <View style={s.screen}>
@@ -333,7 +334,7 @@ export default function Scan() {
               <Text style={banner}>Se perdió el seguimiento. Tus mediciones guardadas se conservan.</Text>
               <Button label="Reiniciar escaneo" onPress={() => {
                 setResetSignal((n) => n + 1); planes.current.clear(); setPlaneCount({ floor: 0, wall: 0, ceiling: 0 });
-                resetAuto(); setPoints([]); startedAt.current = Date.now();
+                resetAuto(); setPoints([]); setStartedAt(Date.now());
               }} />
             </View>
           )}

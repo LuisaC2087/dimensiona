@@ -26,9 +26,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    recheck();
-    getSettings(db).then(setSettings);
-  }, [db, recheck]);
+    let alive = true;
+    checkCompatibility().then((r) => { if (alive) setCompat(r); });
+    getSettings(db).then((s) => { if (alive) setSettings(s); });
+    return () => { alive = false; };
+  }, [db]);
 
   const updateSettings = useCallback(async (s: Partial<Settings>) => {
     await saveSettings(db, s);

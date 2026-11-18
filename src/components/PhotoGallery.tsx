@@ -38,6 +38,8 @@ export function PhotoGallery({ projectId }: { projectId: string }) {
     const [p, n] = await Promise.all([listPhotos(db, projectId), listNotes(db, projectId)]);
     setPhotos(p); setNotes(n);
   }, [db, projectId]);
+  // load() es asíncrona (lee SQLite y luego actualiza); se repite al cambiar la revisión de la nube.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load, revision]);
 
   const add = async (src: 'camera' | 'gallery') => {

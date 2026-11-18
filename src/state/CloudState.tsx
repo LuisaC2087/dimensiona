@@ -92,6 +92,8 @@ export function CloudStateProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => NetInfo.addEventListener((st) => setOnline(!!st.isConnected && st.isInternetReachable !== false)), []);
 
   // Sincronizar al iniciar sesión / recuperar red
+  // run() es asíncrona: espera a la base local antes de cambiar el estado.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { run(); }, [run]);
 
   // Cambios locales → sincronización diferida

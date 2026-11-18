@@ -18,7 +18,8 @@ export default function Home() {
   const { revision } = useCloud();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
 
-  useFocusEffect(useCallback(() => { listProjects(db).then(setProjects); }, [db, revision]));
+  // revision: recargar cuando la nube trae cambios
+  useFocusEffect(useCallback(() => { void revision; listProjects(db).then(setProjects); }, [db, revision]));
 
   if (!settings.tutorialSeen) return <Redirect href="/tutorial" />;
 

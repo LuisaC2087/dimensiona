@@ -1,4 +1,4 @@
-import { detectObject, floorLevel, minAreaRect } from '../objectDetect';
+import { detectObject, floorLevel, minAreaRect, planeUnder } from '../objectDetect';
 
 describe('Medición de objetos', () => {
   test('rectángulo mínimo de un contorno rotado 30°', () => {
@@ -33,7 +33,6 @@ describe('Medición de objetos', () => {
 });
 
 test('planeUnder: el piso también cuenta como superficie', () => {
-  const { planeUnder } = require('../objectDetect');
   const floor = { id: 'f', y: -1.4, cx: 0, cz: 0, widthM: 3, lengthM: 4 };
   expect(planeUnder([floor], { x: 0.5, y: -1.39, z: 0.2 })?.id).toBe('f');
   expect(planeUnder([floor], { x: 0.5, y: -0.5, z: 0.2 })).toBeNull();

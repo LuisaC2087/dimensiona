@@ -1,4 +1,4 @@
-import { measureFromProbes, pickScale, probePoints } from '../boxMeasure';
+import { gridPoints, measureFromGrid, measureFromProbes, median, pickScale, probePoints, smoothMeasures } from '../boxMeasure';
 import { labelEs } from '../objectLabels';
 
 describe('CR-04 medida por recuadro', () => {
@@ -39,7 +39,6 @@ describe('CR-04 medida por recuadro', () => {
 });
 
 describe('CR-05 medida precisa por malla', () => {
-  const { gridPoints, measureFromGrid, median, smoothMeasures } = require('../boxMeasure');
   const cam = { x: 0, y: 0, z: 0 };
   const f = 500, cx = 200, cy = 400; // cámara estenopeica simulada (dp)
   const box = { x: 100, y: 350, width: 200, height: 100 };
