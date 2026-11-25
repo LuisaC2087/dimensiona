@@ -18,7 +18,7 @@ export default function Envios() {
   const { data, error, loading, refreshing, reload } = useLoad(() => api.shipments({ status: FILTERS[f], q }), [f, q]);
   return (
     <Screen header={<Header title="Envíos" kicker="Guías y rastreo" />} onRefresh={reload} refreshing={refreshing}>
-      <Button label="Nuevo envío" icon="▶" onPress={() => router.push('/nuevo-envio')} />
+      <Button label="Nuevo envío" icon="truck-fast" onPress={() => router.push('/nuevo-envio')} />
       <Segmented value={f} onChange={setF} options={[{ value: 'activos', label: 'Activos' }, { value: 'entregados', label: 'Entregados' }, { value: 'otros', label: 'Otros' }]} />
       <Field label="Buscar" value={q} onChangeText={setQ} placeholder="Guía, cliente o ciudad" autoCapitalize="characters" />
       <ErrorBox message={error} onRetry={reload} />

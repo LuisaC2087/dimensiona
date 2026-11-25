@@ -1,5 +1,6 @@
 /** Catálogo de cajas y tarifas por servicio y zona. */
 import { useState } from 'react';
+import { router } from 'expo-router';
 import { Text } from 'react-native';
 import { api } from '../../api/client';
 import type { Box, Service, Zone } from '../../api/types';
@@ -15,7 +16,7 @@ const num = (s: string) => Number(String(s).replace(',', '.'));
 export default function Tarifas() {
   const [tab, setTab] = useState<Tab>('cajas');
   return (
-    <Screen header={<Header title="Tarifas" kicker="Cajas y servicios" />}>
+    <Screen header={<Header title="Tarifas" kicker="Cajas y servicios" onBack={() => router.back()} />}>
       <Segmented value={tab} onChange={setTab} options={[{ value: 'cajas', label: 'Cajas' }, { value: 'servicios', label: 'Servicios' }]} />
       {tab === 'cajas' ? <Cajas /> : <Servicios />}
     </Screen>
@@ -62,7 +63,7 @@ function Cajas() {
   }
   return (
     <>
-      <Button label="Nueva caja" icon="+" onPress={() => setEdit({ name: '', maxWeight: 20, cost: 0 })} />
+      <Button label="Nueva caja" icon="plus" onPress={() => setEdit({ name: '', maxWeight: 20, cost: 0 })} />
       <ErrorBox message={error} onRetry={reload} />
       {loading && !data ? <Loading /> : data?.map((b) => (
         <Card key={b.id} onPress={() => setEdit(b)} accent={b.active ? colors.ink : colors.paper3}>

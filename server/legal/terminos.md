@@ -12,7 +12,7 @@ DIMENSIONA es una herramienta tecnológica que permite:
 
 - Medir productos con la cámara del teléfono, realidad aumentada (ARCore) o una foto con objeto de referencia.
 - Recomendar el embalaje (caja) y calcular el peso volumétrico y cobrable.
-- Cotizar y crear guías de envío, y gestionar su recogida, transporte y entrega por mensajeros de la red.
+- Cotizar y crear guías de envío, y gestionar su recogida, transporte y entrega por mensajeros de la red o por transportadoras aliadas (Servientrega, Coordinadora).
 - Consultar el estado de un envío mediante un código de rastreo.
 
 ## 2. Roles y cuentas
@@ -37,6 +37,17 @@ La Tienda debe **confirmar las medidas y el peso** antes de despachar. El peso *
 - El «ahorro» que muestra la Plataforma es una comparación ilustrativa frente a usar una caja de talla mayor; no constituye una promesa de ahorro.
 - En los envíos **contra entrega**, el mensajero recauda el valor indicado por la Tienda y lo entrega según el acuerdo de liquidación vigente con el Operador.
 
+## 4A. Facturación y liquidaciones
+
+- Al cierre de cada mes se emite una cuenta de cobro con los envíos del periodo. Los precios mostrados incluyen el IVA aplicable. El plazo de pago es de quince (15) días calendario.
+- La factura electrónica de venta se expide a través del proveedor tecnológico autorizado por la DIAN que el Operador tenga contratado.
+- Los valores recaudados contra entrega se transfieren a la Tienda en liquidaciones periódicas, una vez entregado el envío. El Operador puede compensar facturas vencidas con recaudos pendientes, previa notificación.
+- Las ganancias de los Mensajeros se liquidan periódicamente por los envíos entregados.
+
+## 4B. Transportadoras aliadas
+
+Cuando eliges un servicio de Servientrega o Coordinadora, la Plataforma genera la guía y gestiona la recogida en tu nombre usando las condiciones del contrato del Operador con esa transportadora. El transporte lo presta la transportadora, bajo sus propios términos y responsabilidad, y la Plataforma te acompaña en el seguimiento y en las reclamaciones. Las tarifas mostradas pueden ajustarse si la transportadora verifica medidas o peso distintos a los declarados.
+
 ## 5. Obligaciones de la Tienda
 
 - Declarar con veracidad el contenido, valor, medidas y peso de cada envío.
@@ -57,7 +68,7 @@ El Mensajero actúa de forma independiente; el vínculo con el Operador se rige 
 
 El Operador responde por la pérdida, avería o expoliación de los envíos en los términos y límites de la normativa de servicios postales aplicable (Ley 1369 de 2009 y regulación de la Comisión de Regulación de Comunicaciones) y hasta el **valor declarado** asegurado en la guía. No responde por daños derivados de un embalaje inadecuado realizado por la Tienda, de información falsa o incompleta, de vicio propio del producto, de caso fortuito o fuerza mayor.
 
-Las reclamaciones (peticiones, quejas y recursos) se presentan a {{EMAIL}} dentro de los plazos legales, indicando el código de guía. Se responderán en un máximo de quince (15) días hábiles.
+Las peticiones, quejas, reclamos y sugerencias (PQR) se radican en la sección **PQR** de la app o de la página web (con el código de guía si no tienes cuenta), o al correo {{EMAIL}}. Recibirás un número de radicado y respuesta en un máximo de quince (15) días hábiles.
 
 ## 8. Inteligencia artificial
 

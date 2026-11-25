@@ -1,6 +1,6 @@
 {
   "name": "dimensiona-logistica-app",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "expo-router/entry",
   "private": true,
   "scripts": {
@@ -15,6 +15,7 @@
   "dependencies": {
     "@expo-google-fonts/oswald": "^0.4.2",
     "@expo/metro-runtime": "~57.0.19",
+    "@expo/vector-icons": "^15.0.2",
     "@reactvision/react-viro": "^3.1.1",
     "expo": "~57.0.34",
     "expo-constants": "~57.0.23",

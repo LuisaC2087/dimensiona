@@ -10,8 +10,9 @@ import type { Product, QuotePlan, Shipment } from '../api/types';
 import { PackingView } from '../components/PackingView';
 import { RoleGate } from '../components/RoleGate';
 import {
-  Body, Button, Card, Empty, ErrorBox, Field, Header, KeyValue, Label, Loading, Row, Screen, SectionTitle, Segmented, Tag, Title, Toggle,
+  Body, Button, Card, Empty, ErrorBox, Field, Header, KeyValue, Label, Loading, Row, Screen, SectionTitle, Segmented, Steps, Tag, Title, Toggle,
 } from '../components/ui';
+import { Icon } from '../components/Icon';
 import { dims, eta, kg, money, waNumber, ZONE_LABEL } from '../lib/format';
 import { useAuth } from '../state/auth';
 import { colors, fonts, space } from '../theme';
@@ -78,7 +79,7 @@ function NuevoEnvio() {
           <Body style={{ textAlign: 'center' }}>Un mensajero de la red la verá como disponible para recogerla en {store?.address ?? 'tu dirección'}.</Body>
         </Card>
         <KeyValue k="Total" v={money(created.price)} strong />
-        <Button label="Enviar rastreo por WhatsApp" icon="✆" onPress={() => Linking.openURL(`https://wa.me/${waNumber(created.recipient_phone)}?text=${encodeURIComponent(msg)}`)} />
+        <Button label="Enviar rastreo por WhatsApp" icon="whatsapp" onPress={() => Linking.openURL(`https://wa.me/${waNumber(created.recipient_phone)}?text=${encodeURIComponent(msg)}`)} />
         <Button label="Compartir" variant="outline" onPress={() => Share.share({ message: msg })} />
         <Button label="Ver guía" variant="ink" onPress={() => router.replace(`/envio/${created.id}`)} />
         <Button label="Otro envío" variant="ghost" onPress={() => { setQty({}); setTo({ recipientName: '', recipientPhone: '', address: '', city: '', notes: '' }); setPlan(null); setCreated(null); setStep(1); }} />
@@ -88,11 +89,12 @@ function NuevoEnvio() {
 
   return (
     <Screen header={header}>
+      <Steps current={step - 1} steps={[{ label: "Productos", icon: "cube-outline" }, { label: "Cliente", icon: "account" }, { label: "Caja y tarifa", icon: "truck-fast" }]} />
       <ErrorBox message={error} />
 
       {step === 1 && (
         <>
-          <SectionTitle>¿Qué vas a enviar?</SectionTitle>
+          <SectionTitle icon="cube-outline">¿Qué vas a enviar?</SectionTitle>
           {!products ? <Loading /> : products.length ? products.map((p) => {
             const n = qty[p.id] ?? 0;
             return (
@@ -120,7 +122,7 @@ function NuevoEnvio() {
 
       {step === 2 && (
         <>
-          <SectionTitle>¿Para quién?</SectionTitle>
+          <SectionTitle icon="account">¿Para quién?</SectionTitle>
           <Field label="Nombre del cliente" value={to.recipientName} onChangeText={(v) => setTo((t) => ({ ...t, recipientName: v }))} autoComplete="name" />
           <Field label="Celular / WhatsApp" value={to.recipientPhone} onChangeText={(v) => setTo((t) => ({ ...t, recipientPhone: v }))} keyboardType="phone-pad" />
           <Field label="Dirección" value={to.address} onChangeText={(v) => setTo((t) => ({ ...t, address: v }))} placeholder="Cl 72 #10-34 Apto 501" />
@@ -134,7 +136,7 @@ function NuevoEnvio() {
 
       {step === 3 && plan && (
         <>
-          <SectionTitle>Embalaje</SectionTitle>
+          <SectionTitle icon="package-variant-closed">Embalaje</SectionTitle>
           {plan.custom && (
             <Segmented value={packing} onChange={(v) => { setPacking(v); void loadQuote(v); }}
               options={[{ value: 'catalogo', label: 'Cajas estándar' }, { value: 'medida', label: 'Caja a medida' }]} />
@@ -150,13 +152,16 @@ function NuevoEnvio() {
             </Card>
           ))}
 
-          <SectionTitle>Tarifa · {ZONE_LABEL[plan.zone]}</SectionTitle>
+          <SectionTitle icon="cash">Tarifa · {ZONE_LABEL[plan.zone]}</SectionTitle>
           {plan.quotes.length === 0 && <Empty title="Sin cobertura" body="Ningún servicio llega a ese destino." />}
           {plan.quotes.map((q) => {
             const on = q.serviceId === serviceId;
             return (
               <Card key={q.serviceId} onPress={() => setServiceId(q.serviceId)} accent={on ? colors.red : undefined} shadow={on ? colors.red : colors.ink}>
                 <Row style={{ justifyContent: 'space-between' }}>
+                  <View style={{ width: 44, height: 44, backgroundColor: on ? colors.red : colors.ink, alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon name={q.carrier && q.carrier !== 'propia' ? 'truck-fast' : 'moped'} size={24} color={colors.paper} />
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 16, fontWeight: '800' }}>{q.serviceName}</Text>
                     <Body muted style={{ fontSize: 13 }}>{eta(q.etaDays)} · {q.chargeableKg} kg cobrables (vol. {String(q.volumetricKg).replace('.', ',')} kg)</Body>
@@ -166,6 +171,7 @@ function NuevoEnvio() {
                 <Row wrap style={{ gap: 6 }}>
                   {q.cheapest && <Tag label="Más económico" color={colors.ok} />}
                   {q.fastest && <Tag label="Más rápido" color={colors.red} />}
+                  {q.carrier && q.carrier !== 'propia' ? <Tag label="Agendas la recogida" color={colors.grey} /> : <Tag label="Mensajero recoge" color={colors.ink} />}
                 </Row>
               </Card>
             );
@@ -188,7 +194,7 @@ function NuevoEnvio() {
               )}
             </Card>
           )}
-          <Button label="Crear guía" icon="▶" onPress={create} loading={busy} disabled={!quote} />
+          <Button label="Crear guía" icon="check-decagram" onPress={create} loading={busy} disabled={!quote} />
         </>
       )}
     </Screen>

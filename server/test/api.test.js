@@ -32,7 +32,7 @@ before(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dm-test-'));
   proc = spawn(process.execPath, ['src/index.js'], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(PORT), PGLITE_DIR: dir, DATABASE_URL: '', JWT_SECRET: 'test-secret', ADMIN_PASSWORD: 'admin-test-1', SEED_DEMO: 'true', GEMINI_API_KEY: '', APK_URL: 'https://example.com/app.apk', LEGAL_COMPANY: 'Empresa de Prueba SAS' },
+    env: { ...process.env, PORT: String(PORT), PGLITE_DIR: dir, DATABASE_URL: '', JWT_SECRET: 'test-secret', ADMIN_PASSWORD: 'admin-test-1', SEED_DEMO: 'true', GEMINI_API_KEY: '', NODE_ENV: 'test', APK_URL: 'https://example.com/app.apk', LEGAL_COMPANY: 'Empresa de Prueba SAS' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let log = '';
@@ -78,7 +78,7 @@ describe('público', () => {
   test('legal por API', async () => {
     const r = await call('GET', '/api/legal/terminos');
     assert.equal(r.status, 200);
-    assert.equal(r.body.version, '1.0');
+    assert.equal(r.body.version, '1.1');
     assert.equal((await call('GET', '/api/legal/otro')).status, 404);
   });
   test('ruta API desconocida → 404 JSON', async () => {
@@ -107,7 +107,7 @@ describe('identidad', () => {
     assert.ok(ok.body.token);
     const exp = await call('GET', '/api/auth/me/export', { token: ok.body.token });
     assert.equal(exp.status, 200);
-    assert.equal(exp.body.user.terms_version, '1.0');
+    assert.equal(exp.body.user.terms_version, '1.1');
     assert.ok(exp.body.user.terms_accepted_at);
     assert.equal(exp.body.store.name, 'Ana Shop');
     const dup = await call('POST', '/api/auth/register', { body: { ...base, acceptTerms: true } });

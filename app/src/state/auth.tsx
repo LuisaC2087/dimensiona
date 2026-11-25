@@ -1,11 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, loadClientState, setToken, setUnauthorizedHandler } from '../api/client';
 import type { Role, StoreProfile, User } from '../api/types';
+import { View } from 'react-native';
+import { Loading } from '../components/ui';
+import { colors } from '../theme';
 
 interface AuthState {
   ready: boolean;
   user: User | null;
   store: StoreProfile | null;
+  terms: { accepted: string | null; current: string } | null;
   login: (email: string, password: string) => Promise<void>;
   register: (b: Record<string, unknown>) => Promise<{ pending: boolean }>;
   logout: () => Promise<void>;
@@ -20,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [store, setStore] = useState<StoreProfile | null>(null);
+  const [terms, setTerms] = useState<{ accepted: string | null; current: string } | null>(null);
 
   const logout = useCallback(async () => {
     await setToken(null);
@@ -31,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const me = await api.me();
     setUser(me.user);
     setStore(me.store);
+    setTerms(me.terms ?? null);
   }, []);
 
   useEffect(() => {
@@ -59,8 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { pending: false };
   }, [refresh]);
 
-  const value = useMemo(() => ({ ready, user, store, login, register, logout, refresh }), [ready, user, store, login, register, logout, refresh]);
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  const value = useMemo(() => ({ ready, user, store, terms, login, register, logout, refresh }), [ready, user, store, terms, login, register, logout, refresh]);
+  // Nada se monta hasta cargar la sesión guardada: evita pedir datos sin token (enlaces directos, recargas).
+  return <Ctx.Provider value={value}>{ready ? children : <View style={{ flex: 1, backgroundColor: colors.paper, justifyContent: 'center' }}><Loading /></View>}</Ctx.Provider>;
 }
 
 export function useAuth() {

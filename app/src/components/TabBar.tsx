@@ -1,19 +1,17 @@
-/** Barra de pestañas constructivista (propia, igual en web y Android). */
+/** Barra de pestañas constructivista con íconos (igual en web y Android). */
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../theme';
+import { Icon, type IconName } from './Icon';
 
-export const TAB_ICONS: Record<string, string> = {
-  index: '■', productos: '▲', envios: '▶', cuenta: '●', disponibles: '◆', ganancias: '$', operacion: '▶', usuarios: '●', tarifas: '▲', panel: '■', ruta: '▶',
-};
-
-export function TabBar({ state, descriptors, navigation }: any) {
+export function TabBar({ state, descriptors, navigation, icons }: any & { icons: Record<string, IconName> }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ flexDirection: 'row', backgroundColor: colors.ink, borderTopWidth: 6, borderTopColor: colors.red, paddingBottom: insets.bottom }}>
+    <View style={{ flexDirection: 'row', backgroundColor: colors.ink, borderTopWidth: 6, borderTopColor: colors.red, paddingBottom: insets.bottom }} accessibilityRole="tablist">
       {state.routes.map((route: any, i: number) => {
         const { options } = descriptors[route.key];
-        if (options.href === null) return null;
+        // Solo se muestran las pestañas declaradas con ícono (las demás son pantallas internas).
+        if (!(route.name in icons)) return null;
         const focused = state.index === i;
         const label = options.title ?? route.name;
         return (
@@ -22,9 +20,9 @@ export function TabBar({ state, descriptors, navigation }: any) {
               const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
               if (!focused && !e.defaultPrevented) navigation.navigate(route.name);
             }}
-            style={{ flex: 1, minHeight: 60, alignItems: 'center', justifyContent: 'center', gap: 2, backgroundColor: focused ? colors.red : 'transparent' }}>
-            <Text style={{ color: focused ? colors.paper : colors.paper3, fontSize: 16 }}>{TAB_ICONS[route.name] ?? '■'}</Text>
-            <Text style={{ color: colors.paper, fontFamily: fonts.displayMedium, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: focused ? 1 : 0.75 }}>{label}</Text>
+            style={{ flex: 1, minHeight: 62, alignItems: 'center', justifyContent: 'center', gap: 3, backgroundColor: focused ? colors.red : 'transparent' }}>
+            <Icon name={(icons as Record<string, IconName>)[route.name] ?? 'circle-outline'} size={24} color={focused ? colors.paper : colors.paper3} />
+            <Text numberOfLines={1} style={{ color: colors.paper, fontFamily: fonts.displayMedium, fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', opacity: focused ? 1 : 0.8 }}>{label}</Text>
           </Pressable>
         );
       })}

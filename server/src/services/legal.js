@@ -8,8 +8,8 @@ import { Router } from 'express';
 import { h, notFound } from '../auth.js';
 import { ROOT } from '../config.js';
 
-export const LEGAL_VERSION = '1.0';
-const VERSION_DATE = '24 de noviembre de 2026';
+export const LEGAL_VERSION = '1.1';
+const VERSION_DATE = '25 de noviembre de 2026';
 
 const DOCS = {
   terminos: { file: 'terminos.md', title: 'Términos y Condiciones' },

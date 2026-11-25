@@ -1,4 +1,5 @@
 /** Detalle de un envío. Las acciones dependen del rol: tienda, mensajero o administración. */
+import { RequireAuth } from '../../components/RoleGate';
 import { useCallback, useState } from 'react';
 import { Image, Linking, Platform, Share, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -7,7 +8,7 @@ import { api, trackingUrl } from '../../api/client';
 import type { ShipmentStatus } from '../../api/types';
 import { PackingView } from '../../components/PackingView';
 import {
-  Body, Button, Card, ErrorBox, Field, Header, KeyValue, Label, Loading, Row, Screen, SectionTitle, StatusTag, STATUS_COLOR, Tag,
+  Body, Button, Card, ErrorBox, Field, Header, KeyValue, Label, Loading, Row, Screen, SectionTitle, Segmented, StatusTag, STATUS_COLOR, Tag,
 } from '../../components/ui';
 import { dateTime, dims, eta, kg, money, waNumber, ZONE_LABEL } from '../../lib/format';
 import { toJpegBase64 } from '../../lib/image';
@@ -16,6 +17,22 @@ import { useLoad } from '../../lib/useLoad';
 import { useAuth } from '../../state/auth';
 import { measureBus } from '../../state/measureBus';
 import { colors, fonts, space } from '../../theme';
+import { Icon } from '../../components/Icon';
+import { openDocument } from '../../lib/print';
+
+/** Próximos días hábiles (lunes a sábado) para agendar recogida. */
+function nextDays(n = 6) {
+  const out: { iso: string; label: string }[] = [];
+  const d = new Date();
+  const names = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  while (out.length < n) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() === 0) continue;
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    out.push({ iso, label: `${names[d.getDay()]} ${d.getDate()}` });
+  }
+  return out;
+}
 
 const NEXT: Partial<Record<ShipmentStatus, { status: ShipmentStatus; label: string }[]>> = {
   asignado: [{ status: 'recogido', label: 'Marcar recogido' }],
@@ -24,7 +41,11 @@ const NEXT: Partial<Record<ShipmentStatus, { status: ShipmentStatus; label: stri
   novedad: [{ status: 'en_ruta', label: 'Reintentar entrega' }, { status: 'devuelto', label: 'Devolver a tienda' }],
 };
 
-export default function EnvioDetalle() {
+export default function EnvioDetalleScreen() {
+  return <RequireAuth><EnvioDetalle /></RequireAuth>;
+}
+
+function EnvioDetalle() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { data: s, error, loading, reload, refreshing } = useLoad(() => api.shipment(id), [id]);
@@ -36,6 +57,8 @@ export default function EnvioDetalle() {
   const [err, setErr] = useState<string | null>(null);
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
   const [couriers, setCouriers] = useState<{ id: string; name: string; city: string }[] | null>(null);
+  const [pickDay, setPickDay] = useState<string | null>(null);
+  const [pickWin, setPickWin] = useState<'manana' | 'tarde'>('manana');
 
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true); setErr(null);
@@ -91,9 +114,9 @@ export default function EnvioDetalle() {
         </Row>
         {(role === 'mensajero' || role === 'admin') && (
           <Row wrap style={{ gap: space.sm, marginTop: space.sm }}>
-            <Button small variant="ink" label="Llamar" onPress={() => Linking.openURL(`tel:${s.recipient_phone}`)} />
-            <Button small variant="outline" label="WhatsApp" onPress={() => Linking.openURL(`https://wa.me/${waNumber(s.recipient_phone)}`)} />
-            <Button small variant="outline" label="Mapa" onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${s.address}, ${s.city}, Colombia`)}`)} />
+            <Button small variant="ink" icon="phone" label="Llamar" onPress={() => Linking.openURL(`tel:${s.recipient_phone}`)} />
+            <Button small variant="outline" icon="whatsapp" label="WhatsApp" onPress={() => Linking.openURL(`https://wa.me/${waNumber(s.recipient_phone)}`)} />
+            <Button small variant="outline" icon="map-marker" label="Mapa" onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${s.address}, ${s.city}, Colombia`)}`)} />
           </Row>
         )}
       </Card>
@@ -107,15 +130,41 @@ export default function EnvioDetalle() {
         </Card>
       )}
 
+      {s.carrier !== 'propia' && (
+        <Card accent={colors.ink}>
+          <Row style={{ gap: space.sm }}>
+            <Icon name="truck-fast" size={26} color={colors.red} />
+            <View style={{ flex: 1 }}>
+              <Label>Transportadora</Label>
+              <Text style={{ fontFamily: fonts.display, fontSize: 20 }}>{s.carrier_info?.name ?? s.carrier}</Text>
+            </View>
+            {s.carrier_info?.mode === 'simulado' && <Tag label="Simulado" color={colors.warn} />}
+          </Row>
+          {s.carrier_guide && <Body>Guía de la transportadora: <Text selectable style={{ fontWeight: '900' }}>{s.carrier_guide}</Text></Body>}
+          {s.pickup ? (
+            <Row style={{ gap: space.sm }}><Icon name="calendar-check" size={20} color={colors.ok} /><Body>Recogida agendada: {s.pickup.date} · {s.pickup.window === 'manana' ? 'mañana (8–12 h)' : 'tarde (14–18 h)'} · {s.pickup.id}</Body></Row>
+          ) : role !== 'mensajero' && s.status === 'creado' ? (
+            <View style={{ gap: space.sm }}>
+              <Body style={{ fontWeight: '700' }}>Agenda la recogida en tu dirección</Body>
+              <Row wrap style={{ gap: 6 }}>
+                {nextDays().map((d) => <Button key={d.iso} small variant={pickDay === d.iso ? 'ink' : 'outline'} label={d.label} onPress={() => setPickDay(d.iso)} />)}
+              </Row>
+              <Segmented value={pickWin} onChange={setPickWin} options={[{ value: 'manana', label: 'Mañana 8–12' }, { value: 'tarde', label: 'Tarde 14–18' }]} />
+              <Button icon="calendar-clock" label="Agendar recogida" disabled={!pickDay} loading={busy} onPress={() => run(() => api.schedulePickup(s.id, { date: pickDay!, window: pickWin }))} />
+            </View>
+          ) : null}
+        </Card>
+      )}
+
       <ErrorBox message={err} />
       {verifyMsg && <Card accent={colors.ok}><Body style={{ fontWeight: '700' }}>{verifyMsg}</Body></Card>}
 
       {/* ─── Acciones del mensajero ─── */}
       {role === 'mensajero' && s.status === 'creado' && !s.courier_id && (
-        <Button label={`Tomar envío · ganas ${money(s.courier_fee)}`} icon="◆" loading={busy} onPress={() => run(() => api.accept(s.id))} />
+        <Button label={`Tomar envío · ganas ${money(s.courier_fee)}`} icon="ruler-square-compass" loading={busy} onPress={() => run(() => api.accept(s.id))} />
       )}
       {isMine && ['asignado', 'recogido'].includes(s.status) && (
-        <Button label="Verificar medidas con AR" variant="outline" icon="◆"
+        <Button label="Verificar medidas con AR" variant="outline" icon="hand-coin"
           onPress={() => router.push({ pathname: '/medir', params: { purpose: `verify:${s.id}` } })} />
       )}
       {(isMine || role === 'admin') && NEXT[s.status] && !action && (
@@ -154,15 +203,22 @@ export default function EnvioDetalle() {
         </Card>
       )}
 
+      {(role === 'tienda' || role === 'admin' || isMine) && (
+        <Button label="Imprimir rótulo" icon="printer" variant="ink" onPress={() => openDocument('label', s.id).catch((e) => setErr(e.message))} />
+      )}
+
       {/* ─── Acciones de la tienda ─── */}
       {role === 'tienda' && (
         <Row wrap style={{ gap: space.sm }}>
-          <Button label="Enviar rastreo" icon="✆" style={{ flex: 1 }} onPress={() => Linking.openURL(`https://wa.me/${waNumber(s.recipient_phone)}?text=${encodeURIComponent(waMsg)}`)} />
-          <Button label="Compartir" variant="outline" onPress={() => Share.share({ message: waMsg })} />
+          <Button label="Enviar rastreo" icon="whatsapp" style={{ flex: 1 }} onPress={() => Linking.openURL(`https://wa.me/${waNumber(s.recipient_phone)}?text=${encodeURIComponent(waMsg)}`)} />
+          <Button label="Compartir" icon="share-variant" variant="outline" onPress={() => Share.share({ message: waMsg })} />
         </Row>
       )}
+      {role === 'tienda' && (
+        <Button small variant="ghost" icon="message-alert-outline" label="Reportar un problema (PQR)" onPress={() => router.push({ pathname: '/pqr', params: { code: s.code } })} />
+      )}
       {(role === 'tienda' || role === 'admin') && ['creado', 'asignado'].includes(s.status) && (
-        <Button label="Cancelar envío" variant="danger" loading={busy} onPress={() => run(() => api.cancelShipment(s.id))} />
+        <Button label="Cancelar envío" icon="close-octagon" variant="danger" loading={busy} onPress={() => run(() => api.cancelShipment(s.id))} />
       )}
 
       {/* ─── Administración: asignar ─── */}

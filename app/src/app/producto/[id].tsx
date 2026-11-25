@@ -87,7 +87,7 @@ function ProductoForm() {
         <>
           <SectionTitle>Medidas</SectionTitle>
           <Row>
-            <Button label={Platform.OS === 'web' ? 'Medir con foto' : 'Medir con AR'} icon="◆" style={{ flex: 1 }} onPress={() => openMeasure('ar')} />
+            <Button label={Platform.OS === 'web' ? 'Medir con foto' : 'Medir con AR'} icon="cube-scan" style={{ flex: 1 }} onPress={() => openMeasure('ar')} />
             {Platform.OS !== 'web' && <Button label="Con foto" variant="outline" onPress={() => openMeasure('foto')} />}
           </Row>
           <Row wrap style={{ gap: 6 }}>

@@ -22,5 +22,6 @@ export const config = {
   geminiModel: env.GEMINI_MODEL ?? 'gemini-2.5-flash',
   apkUrl: env.APK_URL ?? '',
   appVersion: env.APP_VERSION ?? '1.0.0',
+  publicUrl: (env.PUBLIC_URL || env.RENDER_EXTERNAL_URL || `http://localhost:${env.PORT ?? 4000}`).replace(/\/$/, ''),
   webDist: env.WEB_DIST ?? path.resolve(ROOT, '..', 'app', 'dist'),
 };

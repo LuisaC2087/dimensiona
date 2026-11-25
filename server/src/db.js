@@ -17,18 +17,20 @@ export async function initDb() {
         : false,
       max: 5,
     });
-    impl = { query: (t, p) => pool.query(t, p), kind: 'postgres' };
+    pool.on('error', (e) => console.error('[db] error en conexión inactiva:', e.message)); // no tumbar el proceso
+    impl = { query: (t, p) => pool.query(t, p), kind: 'postgres', close: () => pool.end() };
   } else {
     const { PGlite } = await import('@electric-sql/pglite');
     const db = new PGlite(config.pgliteDir);
     await db.waitReady;
-    impl = { query: (t, p) => db.query(t, p), exec: (t) => db.exec(t), kind: 'pglite' };
+    impl = { query: (t, p) => db.query(t, p), exec: (t) => db.exec(t), kind: 'pglite', close: () => db.close() };
   }
   await migrate();
   return impl.kind;
 }
 
 export const query = (text, params = []) => impl.query(text, params);
+export const closeDb = () => impl?.close?.();
 export const one = async (text, params = []) => (await impl.query(text, params)).rows[0] ?? null;
 export const many = async (text, params = []) => (await impl.query(text, params)).rows;
 
@@ -135,6 +137,74 @@ CREATE TABLE IF NOT EXISTS shipment_events (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS events_shipment_idx ON shipment_events(shipment_id);
+-- v1.1: transportadoras, facturación, liquidaciones, PQR, recuperación de contraseña
+ALTER TABLE services ADD COLUMN IF NOT EXISTS carrier text NOT NULL DEFAULT 'propia';
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS carrier text NOT NULL DEFAULT 'propia';
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS carrier_guide text;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS pickup jsonb;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS carrier_synced integer NOT NULL DEFAULT 0;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS invoice_id uuid;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS cod_settlement_id uuid;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS courier_settlement_id uuid;
+CREATE SEQUENCE IF NOT EXISTS invoice_number_seq START 1;
+CREATE TABLE IF NOT EXISTS invoices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  number text UNIQUE NOT NULL,
+  store_id uuid NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  period text NOT NULL,
+  items jsonb NOT NULL,
+  subtotal numeric NOT NULL,
+  iva numeric NOT NULL,
+  total numeric NOT NULL,
+  status text NOT NULL DEFAULT 'pendiente',
+  issued_at timestamptz NOT NULL DEFAULT now(),
+  due_at timestamptz NOT NULL,
+  paid_at timestamptz,
+  payment_ref text
+);
+CREATE INDEX IF NOT EXISTS invoices_store_idx ON invoices(store_id);
+CREATE TABLE IF NOT EXISTS settlements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind text NOT NULL CHECK (kind IN ('tienda','mensajero')),
+  store_id uuid REFERENCES stores(id) ON DELETE CASCADE,
+  courier_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  amount numeric NOT NULL,
+  shipments integer NOT NULL,
+  status text NOT NULL DEFAULT 'pendiente',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  paid_at timestamptz,
+  payment_ref text
+);
+CREATE SEQUENCE IF NOT EXISTS claim_number_seq START 1;
+CREATE TABLE IF NOT EXISTS claims (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  number text UNIQUE NOT NULL,
+  type text NOT NULL CHECK (type IN ('peticion','queja','reclamo','sugerencia')),
+  shipment_id uuid REFERENCES shipments(id) ON DELETE SET NULL,
+  user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  name text NOT NULL,
+  contact text NOT NULL,
+  message text NOT NULL,
+  status text NOT NULL DEFAULT 'abierta',
+  response text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  due_at timestamptz NOT NULL,
+  responded_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash text PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at timestamptz NOT NULL,
+  used boolean NOT NULL DEFAULT false
+);
+CREATE TABLE IF NOT EXISTS audit_log (
+  id bigserial PRIMARY KEY,
+  user_id uuid,
+  action text NOT NULL,
+  target text,
+  detail jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at timestamptz;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_ip text;

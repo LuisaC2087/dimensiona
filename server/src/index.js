@@ -12,7 +12,7 @@ import cors from 'cors';
 import express from 'express';
 import { HttpError } from './auth.js';
 import { config, ROOT } from './config.js';
-import { initDb } from './db.js';
+import { closeDb, initDb, one } from './db.js';
 import { seed } from './seed.js';
 import { catalogRouter } from './services/catalog.js';
 import { logisticsRouter } from './services/logistics.js';
@@ -20,6 +20,13 @@ import { shipmentsRouter } from './services/shipments.js';
 import { usersRouter } from './services/users.js';
 import { visionRouter } from './services/vision.js';
 import { legalRouter } from './services/legal.js';
+import { billingRouter } from './services/billing.js';
+import { auditRouter } from './services/audit.js';
+import { printApiRouter, printPageRouter } from './services/print.js';
+import { claimsRouter } from './services/claims.js';
+import { passwordsRouter } from './services/passwords.js';
+import { listCarriers } from './carriers/index.js';
+import { mailEnabled } from './services/passwords.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -37,14 +44,43 @@ app.use((req, res, next) => {
 app.use(cors());
 app.use(express.json({ limit: '8mb' }));
 
-app.get('/healthz', (_req, res) => res.json({ ok: true }));
+// Registro de peticiones de la API (método, ruta sin parámetros sensibles, estado, duración)
+app.use('/api', (req, res, next) => {
+  const t0 = Date.now();
+  res.on('finish', () => {
+    if (process.env.NODE_ENV === 'test') return;
+    console.log(`${req.method} ${req.baseUrl}${req.path} ${res.statusCode} ${Date.now() - t0}ms`);
+  });
+  next();
+});
+
+// Límite global por IP: 300 peticiones por minuto a la API
+const hits = new Map();
+app.use('/api', (req, res, next) => {
+  const now = Date.now(), key = req.ip ?? 'x';
+  const h = hits.get(key) ?? { n: 0, t: now };
+  if (now - h.t > 60_000) { h.n = 0; h.t = now; }
+  h.n++;
+  hits.set(key, h);
+  if (hits.size > 10_000) hits.clear();
+  if (h.n > Number(process.env.RATE_LIMIT_PER_MIN ?? 300)) return res.status(429).json({ error: 'Demasiadas peticiones. Espera un momento.' });
+  next();
+});
+
+app.get('/healthz', async (_req, res) => {
+  try { await one('SELECT 1 AS ok'); res.json({ ok: true, db: true, version: config.appVersion }); }
+  catch { res.status(503).json({ ok: false, db: false }); }
+});
 app.use(legalRouter);
+app.use(printPageRouter);
+app.get('/marca', (_req, res) => res.sendFile(path.join(ROOT, 'public', 'marca.html')));
 
 const api = express.Router();
 api.get('/config', (_req, res) => res.json({
   apkUrl: config.apkUrl ? '/descargar' : null, version: config.appVersion, vision: !!config.geminiKey,
+  mail: mailEnabled(), carriers: listCarriers(),
 }));
-api.use(usersRouter, catalogRouter, logisticsRouter, shipmentsRouter, visionRouter);
+api.use(usersRouter, passwordsRouter, catalogRouter, logisticsRouter, shipmentsRouter, visionRouter, billingRouter, printApiRouter, claimsRouter, auditRouter);
 api.use((_req, _res, next) => next(new HttpError(404, 'Ruta no encontrada')));
 app.use('/api', api);
 
@@ -73,4 +109,14 @@ app.use((err, _req, res, _next) => {
 
 const kind = await initDb();
 await seed();
-app.listen(config.port, () => console.log(`DIMENSIONA escuchando en :${config.port} (base: ${kind})`));
+const server = app.listen(config.port, () => console.log(`DIMENSIONA escuchando en :${config.port} (base: ${kind})`));
+
+// Cierre ordenado (Render envía SIGTERM al redesplegar)
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, () => {
+    console.log(`[${sig}] cerrando…`);
+    server.close(async () => { try { await closeDb(); } finally { process.exit(0); } });
+    setTimeout(() => process.exit(0), 8000).unref();
+  });
+}
+process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));

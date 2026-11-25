@@ -6,6 +6,7 @@
  *  - IA: identifica el producto en la imagen (nombre, categoría, frágil) y da una estimación de respaldo.
  * Con las tres medidas, la app pide la caja recomendada y la dibuja en AR alrededor del producto.
  */
+import { RequireAuth } from '../components/RoleGate';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -30,7 +31,11 @@ const DIMS: Dim[] = ['length', 'width', 'height'];
 const TRACK_COLOR: Record<TrackingState, string> = { good: '#3BB273', limited: '#E0A100', lost: colors.red };
 const CAUSE: Record<string, string> = { motion: 'Mueve el teléfono más despacio', features: 'Apunta a una superficie con textura', light: 'Necesitas más luz', none: '' };
 
-export default function Medir() {
+export default function MedirScreen() {
+  return <RequireAuth><Medir /></RequireAuth>;
+}
+
+function Medir() {
   const { purpose } = useLocalSearchParams<{ purpose?: string }>();
   const [support, setSupport] = useState<ARSupport | 'checking'>('checking');
 
@@ -293,8 +298,8 @@ function ARMeasure({ purpose }: { purpose?: string }) {
 
           <View style={{ flexDirection: 'row', gap: space.sm }}>
             {mode === 'auto'
-              ? <Button label={selPlane ? 'Reseleccionar' : 'Seleccionar'} icon="◆" style={{ flex: 1 }} onPress={selectTop} disabled={!reticle} />
-              : <Button label={pts.length ? 'Marcar fin' : 'Marcar inicio'} icon="●" style={{ flex: 1 }} onPress={placePoint} disabled={!reticle} />}
+              ? <Button label={selPlane ? 'Reseleccionar' : 'Seleccionar'} icon="gesture-tap" style={{ flex: 1 }} onPress={selectTop} disabled={!reticle} />
+              : <Button label={pts.length ? 'Marcar fin' : 'Marcar inicio'} icon="crosshairs-gps" style={{ flex: 1 }} onPress={placePoint} disabled={!reticle} />}
             <Button label={ai.busy ? '…' : 'IA'} variant="outline" small onPress={identify} disabled={ai.busy} style={{ alignSelf: 'center' }} />
             <Button label="↺" variant="outline" small onPress={() => { resetAll(); planes.current.clear(); setPlaneTick((n) => n + 1); setResetSignal((n) => n + 1); }} style={{ alignSelf: 'center' }} />
           </View>

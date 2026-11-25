@@ -19,7 +19,7 @@ export async function loadServices(onlyActive = true) {
   return rows.map((s) => ({
     id: s.id, name: s.name, description: s.description, divisor: Number(s.divisor), insurancePct: Number(s.insurance_pct),
     minInsurance: Number(s.min_insurance), codPct: Number(s.cod_pct), courierSharePct: Number(s.courier_share_pct),
-    rates: typeof s.rates === 'string' ? JSON.parse(s.rates) : s.rates, active: s.active,
+    rates: typeof s.rates === 'string' ? JSON.parse(s.rates) : s.rates, active: s.active, carrier: s.carrier ?? 'propia',
   }));
 }
 

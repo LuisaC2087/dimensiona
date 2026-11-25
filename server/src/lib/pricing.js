@@ -44,6 +44,7 @@ export function priceService(service, packages, { zone, declaredValue = 0, codAm
   return {
     serviceId: service.id,
     serviceName: service.name,
+    carrier: service.carrier ?? 'propia',
     zone,
     etaDays: rate.etaDays,
     realKg: Math.round(totalReal * 100) / 100,

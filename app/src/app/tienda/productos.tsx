@@ -18,8 +18,8 @@ export default function Productos() {
   return (
     <Screen header={<Header title="Productos" kicker={`${data?.length ?? 0} en catálogo`} />} onRefresh={reload} refreshing={refreshing}>
       <Row>
-        <Button label="Medir nuevo" icon="◆" style={{ flex: 1 }} onPress={() => router.push('/producto/nuevo?medir=1')} />
-        <Button label="Manual" variant="outline" style={{ flex: 1 }} onPress={() => router.push('/producto/nuevo')} />
+        <Button label="Medir nuevo" icon="cube-scan" style={{ flex: 1 }} onPress={() => router.push('/producto/nuevo?medir=1')} />
+        <Button label="Manual" icon="pencil" variant="outline" style={{ flex: 1 }} onPress={() => router.push('/producto/nuevo')} />
       </Row>
       {(data?.length ?? 0) > 4 && <Field label="Buscar" value={q} onChangeText={setQ} placeholder="Nombre o SKU" />}
       <ErrorBox message={error} onRetry={reload} />

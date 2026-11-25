@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getBaseUrl, getDefaultUrl, setBaseUrl } from '../api/client';
 import { Body, Button, ErrorBox, Field, Label, Row, Title } from '../components/ui';
 import { homeFor, useAuth } from '../state/auth';
 import { colors, fonts, space } from '../theme';
+import { LogoMark } from '../components/Logo';
 
 const DEMOS = [
   { label: 'Tienda', email: 'tienda@demo.app' },
@@ -14,6 +15,8 @@ const DEMOS = [
 
 export default function Login() {
   const { user, login } = useAuth();
+  const { next } = useLocalSearchParams<{ next?: string }>();
+  const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -21,11 +24,11 @@ export default function Login() {
   const [showServer, setShowServer] = useState(false);
   const [server, setServer] = useState(getBaseUrl());
 
-  if (user) return <Redirect href={homeFor(user.role)} />;
+  if (user) return <Redirect href={(safeNext ?? homeFor(user.role)) as any} />;
 
   const submit = async (e = email, p = password) => {
     setBusy(true); setError(null);
-    try { await login(e.trim(), p); router.replace('/'); } catch (err: any) { setError(err.message); } finally { setBusy(false); }
+    try { await login(e.trim(), p); router.replace((safeNext ?? '/') as any); } catch (err: any) { setError(err.message); } finally { setBusy(false); }
   };
 
   return (
@@ -35,6 +38,7 @@ export default function Login() {
         <View style={s.hero}>
           <View style={s.circle} />
           <View style={s.diag} />
+          <View style={{ marginBottom: space.sm, alignSelf: 'flex-start', backgroundColor: colors.ink, padding: 8 }}><LogoMark size={56} negative /></View>
           <Text style={s.kicker}>SMART LOGISTICS</Text>
           <Text style={s.logo}>DIMEN{'\n'}SIONA</Text>
           <Text style={s.tagline}>Mide. Empaca. Envía.</Text>
@@ -45,8 +49,9 @@ export default function Login() {
           <Field label="Correo" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" placeholder="tu@correo.com" />
           <Field label="Contraseña" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" placeholder="••••••••" onSubmitEditing={() => submit()} />
           <ErrorBox message={error} />
-          <Button label="Entrar" onPress={() => submit()} loading={busy} disabled={!email || !password} />
-          <Button label="Crear cuenta" variant="outline" onPress={() => router.push('/registro')} />
+          <Button label="Entrar" icon="login" onPress={() => submit()} loading={busy} disabled={!email || !password} />
+          <Pressable accessibilityRole="link" onPress={() => router.push('/olvido')} style={{ alignSelf: 'flex-end' }}><Text style={{ color: colors.redDark, fontWeight: '700', textDecorationLine: 'underline' }}>¿Olvidaste tu contraseña?</Text></Pressable>
+          <Button label="Crear cuenta" icon="account-plus" variant="outline" onPress={() => router.push('/registro')} />
 
           <View style={{ gap: space.sm, marginTop: space.sm }}>
             <Label>Probar con una cuenta demo</Label>
@@ -57,7 +62,10 @@ export default function Login() {
             </Row>
           </View>
 
-          <Button small variant="ghost" label="Rastrear un envío" onPress={() => router.push('/rastreo')} />
+          <Row style={{ justifyContent: 'center' }}>
+            <Button small variant="ghost" icon="map-marker-radius" label="Rastrear" onPress={() => router.push('/rastreo')} />
+            <Button small variant="ghost" icon="message-alert-outline" label="PQR" onPress={() => router.push('/pqr')} />
+          </Row>
           <Row style={{ justifyContent: 'center' }}>
             <Pressable accessibilityRole="link" onPress={() => router.push('/legal/terminos')}><Text style={{ color: colors.grey, fontSize: 13, textDecorationLine: 'underline' }}>Términos</Text></Pressable>
             <Pressable accessibilityRole="link" onPress={() => router.push('/legal/privacidad')}><Text style={{ color: colors.grey, fontSize: 13, textDecorationLine: 'underline' }}>Tratamiento de datos</Text></Pressable>

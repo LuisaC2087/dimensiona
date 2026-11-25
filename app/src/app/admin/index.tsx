@@ -30,23 +30,27 @@ export default function Panel() {
   const { data, error, loading, refreshing, reload } = useLoad(api.stats);
   const st = (data ?? {}) as Record<string, any>;
   return (
-    <Screen header={<Header title="Panel" kicker="Administración" />} onRefresh={reload} refreshing={refreshing}>
+    <Screen header={<Header title="Panel" kicker="Administración" icon="view-dashboard" />} onRefresh={reload} refreshing={refreshing}>
       <ErrorBox message={error} onRetry={reload} />
       {loading && !data ? <Loading /> : (
         <>
           <Row wrap style={{ gap: space.sm }}>
-            <Stat label="Facturado" value={money(st.facturado)} accent />
-            <Stat label="Margen plataforma" value={money(st.margen)} sub="facturado − pago mensajeros" />
+            <Stat icon="cash-register" label="Facturado" value={money(st.facturado)} accent />
+            <Stat icon="chart-line" label="Margen plataforma" value={money(st.margen)} sub="facturado − pago mensajeros" />
           </Row>
           <Row wrap style={{ gap: space.sm }}>
-            <Stat label="Envíos activos" value={String(st.activos ?? 0)} sub={`${st.envios ?? 0} en total`} />
-            <Stat label="Ahorro a clientes" value={money(st.ahorroClientes)} sub="por medir antes de enviar" />
+            <Stat icon="truck-delivery" label="Envíos activos" value={String(st.activos ?? 0)} sub={`${st.envios ?? 0} en total`} />
+            <Stat icon="piggy-bank" label="Ahorro a clientes" value={money(st.ahorroClientes)} sub="por medir antes de enviar" />
           </Row>
-          {(st.sinAsignar > 0 || st.novedades > 0 || st.pendientes > 0) && (
+          {(st.sinAsignar > 0 || st.novedades > 0 || st.pendientes > 0 || st.sinFacturarMesAnterior > 0 || st.facturasVencidas > 0 || st.liquidacionesPendientes > 0 || st.pqrPorVencer > 0) && (
             <Card accent={colors.red} shadow={colors.red}>
               <Label color={colors.redDark}>Requiere atención</Label>
               {st.sinAsignar > 0 && <Button small variant="outline" label={st.sinAsignar === 1 ? '1 envío sin mensajero' : `${st.sinAsignar} envíos sin mensajero`} onPress={() => router.push('/admin/operacion')} />}
               {st.novedades > 0 && <Button small variant="outline" label={st.novedades === 1 ? '1 novedad de entrega' : `${st.novedades} novedades de entrega`} onPress={() => router.push('/admin/operacion')} />}
+              {st.sinFacturarMesAnterior > 0 && <Button small variant="outline" icon="file-document-multiple" label={`${st.sinFacturarMesAnterior} envíos del mes pasado sin facturar`} onPress={() => router.push('/admin/finanzas')} />}
+              {st.facturasVencidas > 0 && <Button small variant="outline" icon="alert" label={`${st.facturasVencidas} facturas vencidas`} onPress={() => router.push('/admin/finanzas')} />}
+              {st.liquidacionesPendientes > 0 && <Button small variant="outline" icon="bank-transfer" label={`${st.liquidacionesPendientes} liquidaciones por pagar`} onPress={() => router.push('/admin/finanzas')} />}
+              {st.pqrPorVencer > 0 && <Button small variant="outline" icon="message-alert" label={`${st.pqrPorVencer} PQR por vencer`} onPress={() => router.push('/admin/soporte')} />}
               {st.pendientes > 0 && <Button small variant="outline" label={st.pendientes === 1 ? '1 mensajero por aprobar' : `${st.pendientes} mensajeros por aprobar`} onPress={() => router.push('/admin/usuarios')} />}
             </Card>
           )}
@@ -59,8 +63,8 @@ export default function Panel() {
             <Bars rows={(st.byZone ?? []).map((r: any) => ({ key: r.zone, label: ZONE_LABEL[r.zone] ?? r.zone, n: r.n }))} colorOf={(k) => (k === 'local' ? colors.red : k === 'regional' ? colors.ink : colors.grey)} />
           </Card>
           <Row wrap style={{ gap: space.sm }}>
-            <Stat label="Tiendas" value={String(st.tiendas ?? 0)} />
-            <Stat label="Mensajeros activos" value={String(st.mensajeros ?? 0)} />
+            <Stat icon="storefront" label="Tiendas" value={String(st.tiendas ?? 0)} />
+            <Stat icon="moped" label="Mensajeros activos" value={String(st.mensajeros ?? 0)} />
           </Row>
         </>
       )}

@@ -4,6 +4,7 @@ import type { Shipment } from '../api/types';
 import { dateTime, money, ZONE_LABEL } from '../lib/format';
 import { colors, fonts, space } from '../theme';
 import { Card, Row, STATUS_COLOR, StatusTag } from './ui';
+import { Icon } from './Icon';
 
 export function ShipmentCard({ s, show = 'recipient', extra }: { s: Shipment; show?: 'recipient' | 'courier' | 'admin'; extra?: React.ReactNode }) {
   return (
@@ -26,6 +27,12 @@ export function ShipmentCard({ s, show = 'recipient', extra }: { s: Shipment; sh
           {show === 'courier' ? money(s.courier_fee) : money(s.price)}
         </Text>
       </Row>
+      {s.carrier && s.carrier !== 'propia' && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Icon name="truck-fast" size={14} color={colors.grey} />
+          <Text style={{ fontSize: 12, color: colors.grey, fontWeight: '700', textTransform: 'uppercase' }}>{s.carrier}{s.pickup ? ' · recogida agendada' : ' · falta agendar recogida'}</Text>
+        </View>
+      )}
       {s.cod_amount > 0 && (
         <View style={{ backgroundColor: colors.ink, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2 }}>
           <Text style={{ color: colors.paper, fontSize: 12, fontWeight: '700' }}>CONTRA ENTREGA {money(s.cod_amount)}</Text>

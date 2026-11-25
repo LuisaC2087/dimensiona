@@ -1,7 +1,7 @@
 /** Cliente de la API de DIMENSIONA (servicios en Render). */
 import { Platform } from 'react-native';
 import { getItem, setItem } from '../lib/storage';
-import type { Box, Me, Product, Quote, QuotePlan, Service, Shipment, Stats, StoreProfile, TrackInfo, User, VisionObject, PackingResult } from './types';
+import type { BillingSummary, Box, CarrierInfo, Claim, Invoice, Me, Product, Quote, QuotePlan, Service, Settlement, Shipment, Stats, StoreProfile, TrackInfo, User, VisionObject, PackingResult } from './types';
 
 // En la web la app se sirve desde el mismo servidor: rutas relativas.
 const DEFAULT_URL = process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'web' ? '' : 'https://dimensiona-logistica.onrender.com');
@@ -69,7 +69,7 @@ const del = <T>(p: string) => request<T>('DELETE', p);
 export interface ItemInput { productId?: string; qty: number; name?: string; length?: number; width?: number; height?: number; weight?: number; fragile?: boolean }
 
 export const api = {
-  config: () => get<{ apkUrl: string | null; version: string; vision: boolean }>('/config'),
+  config: () => get<{ apkUrl: string | null; version: string; vision: boolean; mail: boolean; carriers: CarrierInfo[] }>('/config'),
   login: (email: string, password: string) => post<{ token: string; user: User }>('/auth/login', { email, password }),
   register: (b: Record<string, unknown>) => post<{ token?: string; user: User; pending?: boolean }>('/auth/register', b),
   me: () => get<Me>('/auth/me'),
@@ -116,6 +116,28 @@ export const api = {
   adminUpdateBox: (id: string, b: Partial<Box>) => put<{ id: string }>(`/admin/boxes/${id}`, b),
   adminServices: () => get<Service[]>('/admin/services'),
   adminUpdateService: (id: string, b: Service) => put<{ id: string }>(`/admin/services/${id}`, b),
+  // v1.1
+  carriers: () => get<CarrierInfo[]>('/carriers'),
+  schedulePickup: (id: string, b: { date: string; window: 'manana' | 'tarde' }) => post<{ id: string; date: string; window: string; mode: string }>(`/shipments/${id}/pickup`, b),
+  printLink: (doc: 'label' | 'invoice', id: string) => post<{ url: string }>('/print-links', { doc, id }),
+  billing: () => get<BillingSummary>('/billing'),
+  payouts: () => get<{ settlements: Settlement[]; pending: { total: number; envios: number }; codHeld: number }>('/payouts'),
+  adminRunBilling: (period: string) => post<{ period: string; invoices: Invoice[] }>('/admin/billing/run', { period }),
+  adminInvoices: (status?: string) => get<Invoice[]>(`/admin/invoices${status ? `?status=${status}` : ''}`),
+  adminPayInvoice: (id: string, ref: string) => post<{ ok: true }>(`/admin/invoices/${id}/pay`, { ref }),
+  adminVoidInvoice: (id: string) => post<{ ok: true }>(`/admin/invoices/${id}/void`),
+  adminRunSettlements: () => post<Settlement[]>('/admin/settlements/run'),
+  adminSettlements: () => get<Settlement[]>('/admin/settlements'),
+  adminPaySettlement: (id: string, ref: string) => post<{ ok: true }>(`/admin/settlements/${id}/pay`, { ref }),
+  adminTempPassword: (id: string) => post<{ email: string; tempPassword: string }>(`/admin/users/${id}/temp-password`),
+  adminAudit: () => get<{ id: number; action: string; target: string | null; detail: unknown; created_at: string; email: string | null }[]>('/admin/audit'),
+  claims: () => get<Claim[]>('/claims'),
+  createClaim: (b: { type: string; message: string; name?: string; contact?: string; code?: string }) => post<{ number: string; due_at: string }>('/claims', b),
+  claimStatus: (n: string) => get<Claim>(`/claims/${encodeURIComponent(n)}/status`),
+  adminRespondClaim: (id: string, response: string, close = true) => post<{ ok: true }>(`/admin/claims/${id}/respond`, { response, close }),
+  acceptTerms: (version: string) => post<{ ok: true }>('/auth/accept-terms', { version }),
+  forgot: (email: string) => post<{ ok: true; mail: boolean; message: string }>('/auth/forgot', { email }),
+  reset: (token: string, password: string) => post<{ ok: true }>('/auth/reset', { token, password }),
 };
 
 export type { Quote };

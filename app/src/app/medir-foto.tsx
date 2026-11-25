@@ -3,6 +3,7 @@
  * Foto superior: referencia → largo → ancho. Foto lateral: referencia → alto.
  * La escala sale de la referencia (p. ej. una tarjeta de 8,56 cm) apoyada junto al producto.
  */
+import { RequireAuth } from '../components/RoleGate';
 import { useMemo, useState } from 'react';
 import { Image, Platform, Pressable, Text, View, type GestureResponderEvent } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -34,7 +35,11 @@ const PAIR_COLOR: Record<string, string> = { ref: colors.ink, length: colors.red
 interface ShotState { uri: string | null; w: number; h: number; taps: Px[] }
 const empty: ShotState = { uri: null, w: 0, h: 0, taps: [] };
 
-export default function MedirFoto() {
+export default function MedirFotoScreen() {
+  return <RequireAuth><MedirFoto /></RequireAuth>;
+}
+
+function MedirFoto() {
   const { purpose } = useLocalSearchParams<{ purpose?: string }>();
   const [shot, setShot] = useState<Shot>('top');
   const [shots, setShots] = useState<Record<Shot, ShotState>>({ top: empty, side: empty });
@@ -121,7 +126,7 @@ export default function MedirFoto() {
       ]} />
 
       <Row>
-        <Button label={cur.uri ? 'Otra foto' : 'Tomar foto'} icon="●" style={{ flex: 1 }} onPress={() => pick(true)} />
+        <Button label={cur.uri ? 'Otra foto' : 'Tomar foto'} icon="camera" style={{ flex: 1 }} onPress={() => pick(true)} />
         <Button label="Galería" variant="outline" onPress={() => pick(false)} />
       </Row>
       <ErrorBox message={error} />

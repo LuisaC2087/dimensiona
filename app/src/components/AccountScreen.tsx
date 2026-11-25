@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Alert, Platform, Share } from 'react-native';
+import Constants from 'expo-constants';
 import { revokeAiConsent } from '../lib/consent';
+import { resetWelcome } from '../lib/onboarding';
 import { router } from 'expo-router';
 import { api, getBaseUrl } from '../api/client';
 import { useAuth } from '../state/auth';
 import { colors } from '../theme';
-import { Body, Button, Card, ErrorBox, Field, Header, KeyValue, Screen, SectionTitle, Segmented, Tag } from './ui';
+import { Body, Button, Card, ErrorBox, Field, Header, KeyValue, ListItem, Screen, SectionTitle, Segmented, Tag } from './ui';
 
 const ROLE_LABEL = { tienda: 'Emprendedor / Tienda', mensajero: 'Mensajero', admin: 'Administrador' } as const;
 
@@ -14,7 +16,7 @@ function confirm(title: string, msg: string, ok: () => void) {
   Alert.alert(title, msg, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Sí', style: 'destructive', onPress: ok }]);
 }
 
-export function AccountScreen() {
+export function AccountScreen({ onBack }: { onBack?: () => void } = {}) {
   const { user, store, logout, refresh } = useAuth();
   const [f, setF] = useState({
     name: user?.name ?? '', phone: user?.phone ?? '', city: user?.city ?? '', vehicle: user?.vehicle ?? 'Moto',
@@ -45,11 +47,12 @@ export function AccountScreen() {
   const out = async () => { await logout(); router.replace('/login'); };
 
   return (
-    <Screen header={<Header title="Cuenta" kicker={ROLE_LABEL[user.role]} />}>
+    <Screen header={<Header title="Cuenta" kicker={ROLE_LABEL[user.role]} icon="account-circle" onBack={onBack} />}>
       <Card accent={colors.red}>
         <Tag label={ROLE_LABEL[user.role]} color={colors.red} />
         <KeyValue k="Correo" v={user.email} />
         <KeyValue k="Servidor" v={getBaseUrl() || 'este sitio'} />
+        <KeyValue k="Versión de la app" v={Constants.expoConfig?.version ?? '—'} />
       </Card>
 
       {user.role === 'tienda' && (
@@ -72,14 +75,18 @@ export function AccountScreen() {
       )}
       <ErrorBox message={error} />
       {msg && <Body style={{ color: colors.ok, fontWeight: '700' }}>{msg}</Body>}
-      <Button label="Guardar cambios" onPress={save} loading={busy} />
+      <Button label="Guardar cambios" icon="content-save" onPress={save} loading={busy} />
 
       <SectionTitle>Contraseña</SectionTitle>
       <Field label="Contraseña actual" value={pwd.password} onChangeText={(v) => setPwd((p) => ({ ...p, password: v }))} secureTextEntry />
       <Field label="Contraseña nueva" value={pwd.newPassword} onChangeText={(v) => setPwd((p) => ({ ...p, newPassword: v }))} secureTextEntry hint="Mínimo 8 caracteres" />
       <Button label="Cambiar contraseña" variant="outline" onPress={changePwd} disabled={!pwd.password || !pwd.newPassword} />
 
-      <SectionTitle>Privacidad y legal</SectionTitle>
+      <SectionTitle icon="lifebuoy">Ayuda</SectionTitle>
+      <ListItem icon="school" title="Ver la guía de bienvenida" sub="Cómo funciona DIMENSIONA para tu rol" onPress={async () => { await resetWelcome(); router.push('/bienvenida'); }} />
+      <ListItem icon="message-alert-outline" title="PQR" sub="Peticiones, quejas, reclamos y sugerencias" onPress={() => router.push('/pqr')} />
+
+      <SectionTitle icon="shield-lock">Privacidad y legal</SectionTitle>
       <Button label="Términos y Condiciones" variant="outline" onPress={() => router.push('/legal/terminos')} />
       <Button label="Tratamiento de datos" variant="outline" onPress={() => router.push('/legal/privacidad')} />
       <Button label="Descargar mis datos" variant="outline" onPress={async () => {
@@ -96,7 +103,7 @@ export function AccountScreen() {
       <Button label="Revocar permiso de IA" variant="ghost" onPress={async () => { await revokeAiConsent(); setMsg('Permiso de IA revocado'); }} />
 
       <SectionTitle>Sesión</SectionTitle>
-      <Button label="Cerrar sesión" variant="ink" onPress={out} />
+      <Button label="Cerrar sesión" icon="logout" variant="ink" onPress={out} />
       {user.role !== 'admin' && (
         <Button label="Eliminar mi cuenta y datos" variant="danger" onPress={() => confirm('Eliminar cuenta', 'Se borrarán tu cuenta, productos y envíos. No se puede deshacer.', async () => {
           try { await api.deleteMe(); await out(); } catch (e: any) { setError(e.message); }

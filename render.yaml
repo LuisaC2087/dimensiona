@@ -29,7 +29,7 @@ services:
       - key: APK_URL
         sync: false # enlace al APK (EAS o GitHub Releases)
       - key: APP_VERSION
-        value: 1.0.0
+        value: 1.1.0
       - key: GEMINI_API_KEY
         sync: false # opcional: reconocimiento con IA (gratis en aistudio.google.com)
       - key: LEGAL_COMPANY
@@ -42,6 +42,39 @@ services:
         sync: false
       - key: LEGAL_CITY
         value: Bogotá D.C.
+      # Facturación
+      - key: BILLING_IVA_PCT
+        value: "19" # confírmalo con tu contador según el servicio prestado
+      - key: BILLING_PREFIX
+        value: DM
+      # Correo para recuperar contraseñas (opcional)
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      # Transportadoras: sin credenciales funcionan en modo simulado
+      - key: SERVIENTREGA_API_URL
+        sync: false
+      - key: SERVIENTREGA_USER
+        sync: false
+      - key: SERVIENTREGA_PASSWORD
+        sync: false
+      - key: SERVIENTREGA_ACCOUNT
+        sync: false
+      - key: COORDINADORA_API_URL
+        sync: false
+      - key: COORDINADORA_USER
+        sync: false
+      - key: COORDINADORA_PASSWORD
+        sync: false
+      - key: COORDINADORA_ACCOUNT
+        sync: false
 
 databases:
   - name: dimensiona-db

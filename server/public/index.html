@@ -7,6 +7,10 @@
 <meta name="description" content="Mide tus productos con la cámara y realidad aumentada, elige la caja justa, cotiza y gestiona tus envíos. Para emprendimientos que venden por Instagram y WhatsApp.">
 <meta name="theme-color" content="#D7261E">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:title" content="DIMENSIONA · Smart Logistics">
+<meta property="og:description" content="Mide tus productos con realidad aumentada, empaca en la caja justa y envía.">
+<meta property="og:image" content="/brand/app-icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
@@ -30,7 +34,7 @@ p { margin: 0 0 12px; }
 header.top { position: sticky; top: 0; z-index: 10; background: var(--ink); color: var(--paper); border-bottom: 6px solid var(--red); }
 header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; gap: 12px; }
 .logo { display: flex; align-items: center; gap: 10px; font: 700 22px var(--display); text-decoration: none; letter-spacing: .04em; }
-.logo i { width: 22px; height: 22px; background: var(--red); transform: rotate(45deg); display: inline-block; }
+.logo img { display: block; height: 40px; width: auto; }
 nav { display: flex; gap: 18px; }
 nav a { text-decoration: none; font-size: 15px; }
 nav a:hover { color: var(--red); }
@@ -121,11 +125,12 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
 <body>
 <header class="top">
   <div class="wrap">
-    <a class="logo" href="/"><i></i>DIMENSIONA</a>
+    <a class="logo" href="/"><img src="/brand/logo-horizontal-negativo.svg" alt="DIMENSIONA Smart Logistics" height="40"></a>
     <nav>
       <a href="#como">Cómo funciona</a>
       <a href="#roles">Roles</a>
       <a href="#rastreo">Rastrear</a>
+      <a href="/marca">Marca</a>
       <a class="cta" href="#descargar">Descargar</a>
     </nav>
   </div>
@@ -194,16 +199,28 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
   </div>
 </section>
 
+<section id="transportadoras">
+  <div class="wrap">
+    <h2>Envía con quien más te convenga</h2>
+    <div class="roles">
+      <div class="role"><span class="tag">Mismo día</span><h3>Red DIMENSIONA</h3><p>Mensajeros de la red recogen en tu puerta y entregan en tu ciudad. Verifican las medidas con AR al recoger.</p></div>
+      <div class="role"><span class="tag">Nacional</span><h3>Servientrega</h3><p>Generamos la guía, agendas la recogida en la app y sigues el rastreo desde DIMENSIONA.</p></div>
+      <div class="role"><span class="tag">Nacional</span><h3>Coordinadora</h3><p>Compara su precio con los demás en la misma cotización y elige el más barato o el más rápido.</p></div>
+    </div>
+    <p class="note" style="margin-top:18px">La conexión con cada transportadora usa las credenciales de tu contrato con ella. Las marcas pertenecen a sus respectivos dueños.</p>
+  </div>
+</section>
+
 <section id="roles" style="background: var(--paper-2)">
   <div class="wrap">
     <h2>Una app, tres roles</h2>
     <div class="roles">
       <div class="role"><span class="tag">Emprendedor</span><h3>Tienda</h3>
-        <ul><li>Catálogo con medidas tomadas por cámara</li><li>Caja recomendada y vista 3D del empaque</li><li>Cotización y guía en un toque</li><li>Contra entrega y enlace de rastreo por WhatsApp</li></ul></div>
+        <ul><li>Catálogo con medidas tomadas por cámara</li><li>Caja recomendada y vista 3D del empaque</li><li>Cotización y guía en un toque</li><li>Contra entrega y enlace de rastreo por WhatsApp</li><li>Facturación mensual y liquidación de recaudos</li><li>Rótulo con QR listo para imprimir</li></ul></div>
       <div class="role"><span class="tag">Calle</span><h3>Mensajero</h3>
         <ul><li>Envíos disponibles cerca</li><li>Verificación de medidas con AR al recoger</li><li>Prueba de entrega con foto</li><li>Ganancias y recaudos del día</li></ul></div>
       <div class="role"><span class="tag">Control</span><h3>Administrador</h3>
-        <ul><li>Métricas de la operación</li><li>Aprobación de mensajeros</li><li>Catálogo de cajas y tarifas</li><li>Asignación y novedades</li></ul></div>
+        <ul><li>Métricas de la operación</li><li>Aprobación de mensajeros</li><li>Catálogo de cajas y tarifas</li><li>Asignación y novedades</li><li>Facturación, pagos y PQR</li></ul></div>
     </div>
   </div>
 </section>
@@ -244,7 +261,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
 <footer>
   <div class="wrap">
     <span>DIMENSIONA · Smart Logistics Platform</span>
-    <span><a href="/terminos">Términos y Condiciones</a> · <a href="/privacidad">Tratamiento de datos</a></span>
+    <span><a href="/terminos">Términos y Condiciones</a> · <a href="/privacidad">Tratamiento de datos</a> · <a href="/app/pqr">PQR</a> · <a href="/marca">Marca</a></span>
     <span>Las medidas son estimaciones: confírmalas antes de despachar.</span>
   </div>
 </footer>

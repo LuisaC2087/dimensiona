@@ -43,11 +43,23 @@ export async function seed() {
     }
   }
 
+  // Transportadoras aliadas (tarifas de referencia: actualízalas con las de tu contrato).
+  const CARRIER_SERVICES = [
+    { carrier: 'servientrega', name: 'Servientrega · Mercancía', description: 'Tarifa de referencia. Actualízala con tu contrato Servientrega.', courier: 0,
+      rates: { local: { base: 9800, perKg: 1700, etaDays: 1 }, regional: { base: 12400, perKg: 2100, etaDays: 2 }, nacional: { base: 15900, perKg: 2900, etaDays: 3 } } },
+    { carrier: 'coordinadora', name: 'Coordinadora · Paquetería', description: 'Tarifa de referencia. Actualízala con tu contrato Coordinadora.', courier: 0,
+      rates: { local: { base: 9500, perKg: 1600, etaDays: 1 }, regional: { base: 12100, perKg: 2000, etaDays: 2 }, nacional: { base: 15400, perKg: 3000, etaDays: 3 } } },
+  ];
+  for (const s of CARRIER_SERVICES) {
+    if (await one('SELECT 1 FROM services WHERE carrier = $1', [s.carrier])) continue;
+    await query('INSERT INTO services (name, description, courier_share_pct, rates, carrier) VALUES ($1,$2,$3,$4,$5)', [s.name, s.description, s.courier, JSON.stringify(s.rates), s.carrier]);
+  }
+
   // Administrador: contraseña de ADMIN_PASSWORD; si falta, se genera y se muestra una sola vez en el log.
   const admin = await one('SELECT id FROM users WHERE email = $1', [config.adminEmail]);
   if (!admin) {
     const pwd = config.adminPassword || (process.env.NODE_ENV === 'production' ? randomBytes(9).toString('base64url') : 'admin1234');
-    await query("INSERT INTO users (email, password_hash, name, role, city, terms_version, terms_accepted_at) VALUES ($1,$2,'Administración','admin','Bogotá','1.0',now())", [config.adminEmail, await bcrypt.hash(pwd, 10)]);
+    await query("INSERT INTO users (email, password_hash, name, role, city, terms_version, terms_accepted_at) VALUES ($1,$2,'Administración','admin','Bogotá','1.1',now())", [config.adminEmail, await bcrypt.hash(pwd, 10)]);
     if (!config.adminPassword) console.log(`[seed] Administrador creado: ${config.adminEmail} / ${pwd}  (cámbiala definiendo ADMIN_PASSWORD)`);
   }
 
@@ -59,11 +71,11 @@ async function seedDemo() {
   if (exists) return;
   const hash = await bcrypt.hash('demo1234', 10);
   const owner = await one(
-    "INSERT INTO users (email, password_hash, name, role, phone, city, terms_version, terms_accepted_at) VALUES ('tienda@demo.app',$1,'Laura Gómez','tienda','3001234567','Bogotá','1.0',now()) RETURNING id", [hash]);
+    "INSERT INTO users (email, password_hash, name, role, phone, city, terms_version, terms_accepted_at) VALUES ('tienda@demo.app',$1,'Laura Gómez','tienda','3001234567','Bogotá','1.1',now()) RETURNING id", [hash]);
   const store = await one(
     "INSERT INTO stores (owner_id, name, city, address, channel, instagram, whatsapp) VALUES ($1,'Luna Velas & Co.','Bogotá','Cra 15 #93-20','Instagram','@lunavelas','3001234567') RETURNING id", [owner.id]);
   const courier = await one(
-    "INSERT INTO users (email, password_hash, name, role, phone, city, vehicle, terms_version, terms_accepted_at) VALUES ('mensajero@demo.app',$1,'Andrés Rojas','mensajero','3109876543','Bogotá','Moto','1.0',now()) RETURNING id", [hash]);
+    "INSERT INTO users (email, password_hash, name, role, phone, city, vehicle, terms_version, terms_accepted_at) VALUES ('mensajero@demo.app',$1,'Andrés Rojas','mensajero','3109876543','Bogotá','Moto','1.1',now()) RETURNING id", [hash]);
 
   const products = [
     ['Vela aromática lavanda', 'VL-01', 'Hogar', 8, 8, 10, 0.4, 38000, true, 'ar', 0.86],

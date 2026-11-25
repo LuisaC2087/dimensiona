@@ -57,6 +57,10 @@ Escribe a {{EMAIL}} indicando tu nombre, el correo de tu cuenta y tu solicitud. 
 
 Aplicamos medidas técnicas y organizativas: conexión cifrada (HTTPS), contraseñas con hash bcrypt, sesiones con token firmado, control de acceso por rol, limitación de intentos de ingreso y almacenamiento seguro del token en el teléfono.
 
+## 7A. Almacenamiento en tu dispositivo
+
+La app guarda en tu dispositivo solo lo estrictamente necesario para funcionar: el token de tu sesión (en el almacenamiento seguro del teléfono o en el navegador), tu preferencia de servidor, las ayudas que cerraste y tu autorización para la IA. No usamos cookies de publicidad ni de rastreo.
+
 ## 8. Conservación
 
 Conservamos los datos mientras la cuenta esté activa y, después, solo el tiempo exigido por obligaciones legales, contables o de servicios postales. Las fotos de evidencia se conservan mientras exista la guía.

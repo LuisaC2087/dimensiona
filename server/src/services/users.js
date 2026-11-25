@@ -5,6 +5,7 @@ import { auth, bad, h, HttpError, notFound, signToken } from '../auth.js';
 import { many, one, query } from '../db.js';
 import { loadBoxes, loadServices } from './catalog.js';
 import { LEGAL_VERSION } from './legal.js';
+import { audit } from './audit.js';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const publicUser = (u) => ({ id: u.id, email: u.email, name: u.name, role: u.role, phone: u.phone, city: u.city, vehicle: u.vehicle, active: u.active });
@@ -57,7 +58,18 @@ usersRouter.post('/auth/login', h(async (req, res) => {
   res.json({ token: signToken(user), user: publicUser(user) });
 }));
 
-usersRouter.get('/auth/me', auth(), h(async (req, res) => res.json({ user: publicUser(req.user), store: req.store ?? null })));
+usersRouter.get('/auth/me', auth(), h(async (req, res) => {
+  const t = await one('SELECT terms_version FROM users WHERE id=$1', [req.user.id]);
+  res.json({ user: publicUser(req.user), store: req.store ?? null, terms: { accepted: t?.terms_version ?? null, current: LEGAL_VERSION } });
+}));
+
+// Aceptar una versión nueva de los términos (queda registrada con fecha e IP)
+usersRouter.post('/auth/accept-terms', auth(), h(async (req, res) => {
+  if (req.body?.version !== LEGAL_VERSION) throw bad('Versión de términos desactualizada');
+  await query('UPDATE users SET terms_version=$1, terms_accepted_at=now(), terms_ip=$2 WHERE id=$3', [LEGAL_VERSION, req.ip, req.user.id]);
+  await audit(req.user.id, 'terms.accept', LEGAL_VERSION);
+  res.json({ ok: true });
+}));
 
 usersRouter.patch('/auth/me', auth(), h(async (req, res) => {
   const b = req.body ?? {};
@@ -99,6 +111,7 @@ usersRouter.patch('/admin/users/:id', auth('admin'), h(async (req, res) => {
   if (req.params.id === req.user.id) throw bad('No puedes modificar tu propia cuenta desde aquí');
   const u = await one('UPDATE users SET active=coalesce($1, active) WHERE id=$2 RETURNING id, active', [typeof req.body?.active === 'boolean' ? req.body.active : null, req.params.id]);
   if (!u) throw notFound();
+  await audit(req.user.id, u.active ? 'user.activate' : 'user.deactivate', req.params.id);
   res.json(u);
 }));
 usersRouter.get('/admin/couriers', auth('admin'), h(async (_req, res) => {
@@ -119,6 +132,7 @@ usersRouter.put('/admin/boxes/:id', auth('admin'), h(async (req, res) => {
   const row = await one('UPDATE boxes SET name=$1, length_cm=$2, width_cm=$3, height_cm=$4, max_weight_kg=$5, cost=$6, active=$7 WHERE id=$8 RETURNING id',
     [String(b.name || 'Caja').slice(0, 40), n(b.length, 'Largo', 1), n(b.width, 'Ancho', 1), n(b.height, 'Alto', 0.5), n(b.maxWeight ?? 20, 'Peso máx.', 0.1), n(b.cost ?? 0, 'Costo'), b.active !== false, req.params.id]);
   if (!row) throw notFound();
+  await audit(req.user.id, 'service.update', req.params.id, { rates });
   res.json(row);
 }));
 
@@ -134,7 +148,7 @@ usersRouter.put('/admin/services/:id', auth('admin'), h(async (req, res) => {
   if (!Object.keys(rates).length) throw bad('El servicio necesita al menos una zona');
   const row = await one(`UPDATE services SET name=$1, description=$2, divisor=$3, insurance_pct=$4, cod_pct=$5, courier_share_pct=$6, rates=$7, active=$8
     WHERE id=$9 RETURNING id`,
-    [String(b.name).slice(0, 60), b.description ?? null, n(b.divisor ?? 5000, 'Divisor', 1000), n(b.insurancePct ?? 1, 'Seguro'), n(b.codPct ?? 3, 'Contra entrega'),
+    [String(b.name ?? '').slice(0, 60) || 'Servicio', b.description ?? null, n(b.divisor ?? 5000, 'Divisor', 1000), n(b.insurancePct ?? 1, 'Seguro'), n(b.codPct ?? 3, 'Contra entrega'),
       n(b.courierSharePct ?? 70, 'Participación'), JSON.stringify(rates), b.active !== false, req.params.id]);
   if (!row) throw notFound();
   res.json(row);

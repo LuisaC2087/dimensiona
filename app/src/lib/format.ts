@@ -45,3 +45,5 @@ export function waNumber(phone: string): string {
 }
 
 export const METHOD_LABEL: Record<'ar' | 'foto' | 'ia' | 'manual', string> = { ar: 'Medido con AR', foto: 'Medido con foto', ia: 'Estimado por IA', manual: 'Manual' };
+
+export const CLAIM_LABEL = { peticion: 'Petición', queja: 'Queja', reclamo: 'Reclamo', sugerencia: 'Sugerencia' } as const;

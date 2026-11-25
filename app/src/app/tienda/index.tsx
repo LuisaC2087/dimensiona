@@ -1,13 +1,58 @@
-import { router } from 'expo-router';
-import { Text, View } from 'react-native';
+import { router, type Href } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
 import { api } from '../../api/client';
-import type { Shipment, Stats } from '../../api/types';
+import type { Shipment } from '../../api/types';
+import { Icon, type IconName } from '../../components/Icon';
+import { LogoMark } from '../../components/Logo';
 import { ShipmentCard } from '../../components/ShipmentCard';
-import { Body, Button, Card, Empty, ErrorBox, Header, Loading, Row, Screen, SectionTitle, Stat, Title } from '../../components/ui';
+import { Button, Card, Empty, ErrorBox, Header, Loading, Row, Screen, SectionTitle, Stat } from '../../components/ui';
 import { money } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
 import { useAuth } from '../../state/auth';
 import { colors, fonts, space } from '../../theme';
+
+const ACTIONS: { icon: IconName; title: string; sub: string; href: Href; primary?: boolean }[] = [
+  { icon: 'cube-scan', title: 'Medir', sub: 'producto con AR', href: '/producto/nuevo?medir=1', primary: true },
+  { icon: 'truck-fast', title: 'Enviar', sub: 'nuevo envío', href: '/nuevo-envio' },
+  { icon: 'map-marker-radius', title: 'Rastrear', sub: 'una guía', href: '/rastreo' },
+  { icon: 'receipt', title: 'Facturas', sub: 'y recaudos', href: '/tienda/facturas' },
+];
+
+function ActionTile({ a }: { a: (typeof ACTIONS)[number] }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={`${a.title} ${a.sub}`} onPress={() => router.push(a.href)}
+      style={({ pressed }) => ({ width: '48%', flexGrow: 1, minHeight: 104, padding: space.md, gap: 6, justifyContent: 'space-between',
+        backgroundColor: a.primary ? colors.red : colors.ink, borderWidth: 3, borderColor: colors.ink, transform: pressed ? [{ translateX: 2 }, { translateY: 2 }] : [] })}>
+      <Icon name={a.icon} size={34} color={colors.paper} />
+      <View>
+        <Text style={{ fontFamily: fonts.display, fontSize: 22, color: colors.paper, textTransform: 'uppercase' }}>{a.title}</Text>
+        <Text style={{ color: colors.paper3, fontSize: 13 }}>{a.sub}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function FirstSteps({ products, shipments }: { products: number; shipments: number }) {
+  const steps = [
+    { done: products > 0, label: 'Mide tu primer producto', icon: 'cube-scan' as IconName, href: '/producto/nuevo?medir=1' as Href },
+    { done: shipments > 0, label: 'Crea tu primer envío', icon: 'truck-fast' as IconName, href: '/nuevo-envio' as Href },
+    { done: shipments > 0, label: 'Comparte el rastreo por WhatsApp', icon: 'whatsapp' as IconName, href: '/tienda/envios' as Href },
+  ];
+  if (steps.every((s) => s.done)) return null;
+  return (
+    <Card accent={colors.red}>
+      <Text style={{ fontFamily: fonts.display, fontSize: 20, textTransform: 'uppercase' }}>Primeros pasos</Text>
+      {steps.map((s) => (
+        <Pressable key={s.label} accessibilityRole="button" onPress={() => router.push(s.href)} style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44 }}>
+          <Icon name={s.done ? 'check-circle' : 'circle-outline'} size={26} color={s.done ? colors.ok : colors.grey} />
+          <Icon name={s.icon} size={20} color={colors.ink} />
+          <Text style={{ flex: 1, fontSize: 16, fontWeight: '700', textDecorationLine: s.done ? 'line-through' : 'none', color: s.done ? colors.grey : colors.ink }}>{s.label}</Text>
+          {!s.done && <Icon name="chevron-right" size={22} color={colors.grey} />}
+        </Pressable>
+      ))}
+    </Card>
+  );
+}
 
 export default function TiendaInicio() {
   const { store, user } = useAuth();
@@ -15,39 +60,30 @@ export default function TiendaInicio() {
     const [stats, ships] = await Promise.all([api.stats(), api.shipments({ status: 'creado,asignado,recogido,en_ruta,novedad' })]);
     return { stats: stats as Record<string, number>, ships: ships as Shipment[] };
   });
-  const st = (data?.stats ?? {}) as Stats & Record<string, number>;
+  const st = (data?.stats ?? {}) as Record<string, number>;
 
   return (
-    <Screen header={<Header title={store?.name ?? 'Mi tienda'} kicker={`Hola, ${user?.name.split(' ')[0] ?? ''}`} />} onRefresh={reload} refreshing={refreshing}>
-      {/* Acción principal: medir con la cámara */}
-      <Card shadow={colors.red} onPress={() => router.push('/producto/nuevo?medir=1')}>
-        <Row>
-          <View style={{ width: 64, height: 64, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '45deg' }] }}>
-            <Text style={{ color: colors.paper, fontFamily: fonts.display, fontSize: 22, transform: [{ rotate: '-45deg' }] }}>AR</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Title size={22}>Medir un producto</Title>
-            <Body muted>Apunta la cámara: la realidad aumentada toma largo, ancho y alto.</Body>
-          </View>
-        </Row>
-      </Card>
-      <Button label="Nuevo envío" icon="▶" variant="ink" onPress={() => router.push('/nuevo-envio')} />
+    <Screen header={<Header title={store?.name ?? 'Mi tienda'} kicker={`Hola, ${user?.name.split(' ')[0] ?? ''}`} right={<LogoMark size={40} negative />} />} onRefresh={reload} refreshing={refreshing}>
+      <Row wrap style={{ gap: space.sm }}>
+        {ACTIONS.map((a) => <ActionTile key={a.title} a={a} />)}
+      </Row>
 
       <ErrorBox message={error} onRetry={reload} />
       {loading && !data ? <Loading /> : (
         <>
+          <FirstSteps products={st.productos ?? 0} shipments={st.total ?? 0} />
           <Row wrap style={{ gap: space.sm }}>
-            <Stat label="Ahorro por medir" value={money(st.ahorro)} accent sub="vs. elegir la caja a ojo" />
-            <Stat label="Envíos activos" value={String(st.activos ?? 0)} sub={`${st.entregados ?? 0} entregados`} />
+            <Stat icon="piggy-bank" label="Ahorro por medir" value={money(st.ahorro)} accent sub="vs. elegir la caja a ojo" />
+            <Stat icon="truck-delivery" label="Envíos activos" value={String(st.activos ?? 0)} sub={`${st.entregados ?? 0} entregados`} />
           </Row>
           <Row wrap style={{ gap: space.sm }}>
-            <Stat label="Llenado de cajas" value={st.llenadoPromedio != null ? `${st.llenadoPromedio}%` : '—'} sub="promedio de tus paquetes" />
-            <Stat label="Recaudo contra entrega" value={money(st.recaudo)} sub={`${st.productosMedidos ?? 0}/${st.productos ?? 0} productos medidos`} />
+            <Stat icon="package-variant" label="Llenado de cajas" value={st.llenadoPromedio != null ? `${st.llenadoPromedio}%` : '—'} sub="promedio de tus paquetes" />
+            <Stat icon="hand-coin" label="Recaudo contra entrega" value={money(st.recaudo)} sub={`${st.productosMedidos ?? 0}/${st.productos ?? 0} productos medidos`} />
           </Row>
 
-          <SectionTitle action={<Button small variant="ghost" label="Ver todos" onPress={() => router.push('/tienda/envios')} />}>En movimiento</SectionTitle>
+          <SectionTitle icon="truck-delivery" action={<Button small variant="ghost" label="Ver todos" onPress={() => router.push('/tienda/envios')} />}>En movimiento</SectionTitle>
           {data?.ships.length ? data.ships.slice(0, 5).map((s) => <ShipmentCard key={s.id} s={s} />) : (
-            <Empty title="Sin envíos activos" body="Crea tu primer envío: elige productos, la app calcula la caja y el precio." action={<Button small label="Nuevo envío" onPress={() => router.push('/nuevo-envio')} />} />
+            <Empty icon="truck-outline" title="Sin envíos activos" body="Crea un envío: elige productos y la app calcula la caja y el precio." action={<Button small icon="truck-fast" label="Nuevo envío" onPress={() => router.push('/nuevo-envio')} />} />
           )}
         </>
       )}

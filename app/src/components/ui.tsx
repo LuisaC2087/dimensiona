@@ -10,6 +10,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, MAX_WIDTH, SHADOW_OFFSET, space } from '../theme';
 import type { ShipmentStatus } from '../api/types';
+import { Icon, type IconName } from './Icon';
+import { getItem, setItem } from '../lib/storage';
+import { useEffect } from 'react';
 
 export function Title({ children, size = 30, color = colors.ink, style }: { children: ReactNode; size?: number; color?: string; style?: StyleProp<TextStyle> }) {
   return <Text style={[{ fontFamily: fonts.display, fontSize: size, lineHeight: size * 1.05, color, textTransform: 'uppercase', letterSpacing: 0.5 }, style]}>{children}</Text>;
@@ -24,16 +27,17 @@ export function Body({ children, style, muted, numberOfLines }: { children: Reac
 }
 
 /** Encabezado con banda roja diagonal. */
-export function Header({ title, kicker, right, onBack }: { title: string; kicker?: string; right?: ReactNode; onBack?: () => void }) {
+export function Header({ title, kicker, right, onBack, icon }: { title: string; kicker?: string; right?: ReactNode; onBack?: () => void; icon?: IconName }) {
   return (
     <View style={hs.wrap}>
       <View style={hs.band} />
       <View style={hs.row}>
         {onBack && (
           <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={onBack} style={hs.back} hitSlop={8}>
-            <Text style={{ color: colors.paper, fontFamily: fonts.display, fontSize: 26, marginTop: -2 }}>←</Text>
+            <Icon name="arrow-left" size={26} color={colors.paper} />
           </Pressable>
         )}
+        {icon && !onBack && <View style={{ width: 44, height: 44, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={26} color={colors.paper} /></View>}
         <View style={{ flex: 1 }}>
           {kicker && <Label color={colors.paper3}>{kicker}</Label>}
           <Title color={colors.paper} size={28} style={{ marginTop: 2 }}>{title}</Title>
@@ -89,7 +93,7 @@ const cs = StyleSheet.create({ card: { backgroundColor: colors.paper, borderWidt
 
 type BtnVariant = 'primary' | 'ink' | 'outline' | 'ghost' | 'danger';
 export function Button({ label, onPress, variant = 'primary', disabled, loading, icon, style, small }: {
-  label: string; onPress?: () => void; variant?: BtnVariant; disabled?: boolean; loading?: boolean; icon?: string; style?: StyleProp<ViewStyle>; small?: boolean;
+  label: string; onPress?: () => void; variant?: BtnVariant; disabled?: boolean; loading?: boolean; icon?: IconName; style?: StyleProp<ViewStyle>; small?: boolean;
 }) {
   const bg = { primary: colors.red, ink: colors.ink, outline: colors.paper, ghost: 'transparent', danger: colors.paper }[variant];
   const fg = { primary: colors.paper, ink: colors.paper, outline: colors.ink, ghost: colors.ink, danger: colors.redDark }[variant];
@@ -107,7 +111,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
         }, pressed && off > 0 ? { transform: [{ translateX: 3 }, { translateY: 3 }] } : null]}>
         {loading ? <ActivityIndicator color={fg} /> : (
           <>
-            {icon && <Text style={{ color: fg, fontSize: small ? 16 : 19 }}>{icon}</Text>}
+            {icon && <Icon name={icon} size={small ? 18 : 22} color={fg} />}
             <Text style={{ color: fg, fontFamily: fonts.display, fontSize: small ? 15 : 18, textTransform: 'uppercase', letterSpacing: 0.6 }}>{label}</Text>
           </>
         )}
@@ -158,7 +162,7 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
   return (
     <Pressable accessibilityRole="switch" accessibilityState={{ checked: value }} onPress={() => onChange(!value)} style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 48 }}>
       <View style={{ width: 30, height: 30, borderWidth: 3, borderColor: colors.ink, backgroundColor: value ? colors.red : colors.paper, alignItems: 'center', justifyContent: 'center' }}>
-        {value && <Text style={{ color: colors.paper, fontWeight: '900', fontSize: 16 }}>✓</Text>}
+        {value && <Icon name="check-bold" size={18} color={colors.paper} />}
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 16, fontWeight: '600', color: colors.ink }}>{label}</Text>
@@ -168,10 +172,13 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
   );
 }
 
-export function Stat({ label, value, accent, sub }: { label: string; value: string; accent?: boolean; sub?: string }) {
+export function Stat({ label, value, accent, sub, icon }: { label: string; value: string; accent?: boolean; sub?: string; icon?: IconName }) {
   return (
     <View style={{ flex: 1, minWidth: 140, backgroundColor: accent ? colors.red : colors.ink, padding: space.md, gap: 2 }}>
-      <Label color={accent ? colors.paper : colors.paper3}>{label}</Label>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        {icon && <Icon name={icon} size={16} color={accent ? colors.paper : colors.paper3} />}
+        <Label color={accent ? colors.paper : colors.paper3}>{label}</Label>
+      </View>
       <Title color={colors.paper} size={26}>{value}</Title>
       {sub && <Text style={{ color: accent ? colors.paper : colors.paper3, fontSize: 12 }}>{sub}</Text>}
     </View>
@@ -194,11 +201,11 @@ export function StatusTag({ status, label }: { status: ShipmentStatus; label: st
   return <Tag label={label} color={STATUS_COLOR[status]} />;
 }
 
-export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+export function SectionTitle({ children, action, icon }: { children: ReactNode; action?: ReactNode; icon?: IconName }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.md, marginTop: space.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, flexShrink: 1 }}>
-        <View style={{ width: 14, height: 14, backgroundColor: colors.red, transform: [{ rotate: '45deg' }] }} />
+        {icon ? <Icon name={icon} size={24} color={colors.red} /> : <View style={{ width: 14, height: 14, backgroundColor: colors.red, transform: [{ rotate: '45deg' }] }} />}
         <Title size={22}>{children}</Title>
       </View>
       {action}
@@ -206,10 +213,10 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
   );
 }
 
-export function Empty({ title, body, action }: { title: string; body?: string; action?: ReactNode }) {
+export function Empty({ title, body, action, icon }: { title: string; body?: string; action?: ReactNode; icon?: IconName }) {
   return (
     <View style={{ alignItems: 'center', padding: space.xl, gap: space.md, borderWidth: 3, borderColor: colors.ink, borderStyle: 'dashed' }}>
-      <View style={{ width: 54, height: 54, borderRadius: 27, borderWidth: 8, borderColor: colors.red }} />
+      {icon ? <Icon name={icon} size={54} color={colors.red} /> : <View style={{ width: 54, height: 54, borderRadius: 27, borderWidth: 8, borderColor: colors.red }} />}
       <Title size={20} style={{ textAlign: 'center' }}>{title}</Title>
       {body && <Body muted style={{ textAlign: 'center' }}>{body}</Body>}
       {action}
@@ -255,6 +262,60 @@ export function WebFrame({ children }: { children: ReactNode }) {
     <View style={{ flex: 1, backgroundColor: colors.ink, alignItems: 'center', overflow: 'hidden' }}>
       <View pointerEvents="none" style={{ position: 'absolute', width: '200%', height: 120, top: '62%', left: '-50%', backgroundColor: colors.red, transform: [{ rotate: '-10deg' }] }} />
       <View style={{ flex: 1, width: '100%', maxWidth: MAX_WIDTH, backgroundColor: colors.paper, borderLeftWidth: 3, borderRightWidth: 3, borderColor: colors.ink }}>{children}</View>
+    </View>
+  );
+}
+
+/** Ayuda contextual que se puede cerrar (recuerda la decisión en el dispositivo). */
+export function Tip({ id, title, children, icon = 'lightbulb-on-outline' }: { id: string; title: string; children: ReactNode; icon?: IconName }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => { void getItem(`dm.tip.${id}`).then((v) => setShow(v !== 'cerrado')); }, [id]);
+  if (!show) return null;
+  return (
+    <View style={{ flexDirection: 'row', gap: space.md, backgroundColor: colors.paper2, borderLeftWidth: 8, borderColor: colors.red, padding: space.md }} accessibilityRole="summary">
+      <Icon name={icon} size={26} color={colors.red} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ fontFamily: fonts.display, fontSize: 16, textTransform: 'uppercase', color: colors.ink }}>{title}</Text>
+        <Text style={{ fontSize: 14, lineHeight: 20, color: colors.ink }}>{children}</Text>
+      </View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Cerrar ayuda" hitSlop={10} onPress={() => { setShow(false); void setItem(`dm.tip.${id}`, 'cerrado'); }}>
+        <Icon name="close" size={20} color={colors.grey} />
+      </Pressable>
+    </View>
+  );
+}
+
+/** Fila de menú con ícono, título, descripción y flecha. */
+export function ListItem({ icon, title, sub, onPress, right, danger }: { icon: IconName; title: string; sub?: string; onPress?: () => void; right?: ReactNode; danger?: boolean }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress}
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, paddingHorizontal: space.md, borderWidth: 3, borderColor: colors.ink, backgroundColor: pressed ? colors.paper2 : colors.paper, minHeight: 60 })}>
+      <View style={{ width: 40, height: 40, backgroundColor: danger ? colors.redDark : colors.ink, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} size={22} color={colors.paper} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: danger ? colors.redDark : colors.ink }}>{title}</Text>
+        {sub && <Text style={{ fontSize: 13, color: colors.grey }}>{sub}</Text>}
+      </View>
+      {right ?? (onPress ? <Icon name="chevron-right" size={24} color={colors.grey} /> : null)}
+    </Pressable>
+  );
+}
+
+/** Indicador de pasos con íconos (asistentes). */
+export function Steps({ steps, current }: { steps: { label: string; icon: IconName }[]; current: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 4 }} accessibilityLabel={`Paso ${current + 1} de ${steps.length}: ${steps[current]?.label}`}>
+      {steps.map((s, i) => {
+        const on = i <= current;
+        return (
+          <View key={s.label} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+            <View style={{ width: '100%', height: 6, backgroundColor: on ? colors.red : colors.paper3 }} />
+            <Icon name={i < current ? 'check-circle' : s.icon} size={20} color={on ? colors.ink : colors.grey} />
+            <Text style={{ fontFamily: fonts.displayMedium, fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', color: on ? colors.ink : colors.grey }}>{s.label}</Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
