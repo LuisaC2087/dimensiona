@@ -1,0 +1,88 @@
+{
+  "expo": {
+    "name": "DIMENSIONA",
+    "slug": "dimensiona-logistica",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "dimensiona",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#EFE6D3",
+    "android": {
+      "package": "co.dimensiona.logistica",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#D7261E"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.INTERNET"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "co.dimensiona.logistica",
+      "infoPlist": {
+        "NSCameraUsageDescription": "DIMENSIONA usa la cámara para medir tus productos con realidad aumentada."
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro",
+      "name": "DIMENSIONA",
+      "themeColor": "#D7261E",
+      "backgroundColor": "#EFE6D3"
+    },
+    "experiments": {
+      "baseUrl": "/app",
+      "typedRoutes": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#D7261E"
+        }
+      ],
+      "expo-font",
+      "expo-secure-store",
+      [
+        "@reactvision/react-viro",
+        {
+          "telemetry": false,
+          "android": {
+            "xRMode": [
+              "AR"
+            ]
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "microphonePermission": false,
+          "cameraPermission": "DIMENSIONA usa la cámara para medir tus productos y registrar la prueba de entrega.",
+          "photosPermission": "DIMENSIONA usa tus fotos solo para medir productos."
+        }
+      ]
+    ],
+    "extra": {
+      "router": {}
+    }
+  }
+}

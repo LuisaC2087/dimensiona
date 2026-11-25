@@ -1,0 +1,50 @@
+# Blueprint de Render: un servicio web (API + página de descarga + app web) y una base PostgreSQL.
+# Render → New → Blueprint → elige este repositorio.
+services:
+  - type: web
+    name: dimensiona-logistica
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: cd app && npm ci && npx expo export -p web && cd ../server && npm ci --omit=dev
+    startCommand: cd server && npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dimensiona-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@dimensiona.app
+      - key: ADMIN_PASSWORD
+        generateValue: true # consúltala en Render → Environment
+      - key: SEED_DEMO
+        value: "true" # cuentas demo tienda@demo.app y mensajero@demo.app (demo1234)
+      - key: APK_URL
+        sync: false # enlace al APK (EAS o GitHub Releases)
+      - key: APP_VERSION
+        value: 1.0.0
+      - key: GEMINI_API_KEY
+        sync: false # opcional: reconocimiento con IA (gratis en aistudio.google.com)
+      - key: LEGAL_COMPANY
+        sync: false
+      - key: LEGAL_NIT
+        sync: false
+      - key: LEGAL_ADDRESS
+        sync: false
+      - key: LEGAL_EMAIL
+        sync: false
+      - key: LEGAL_CITY
+        value: Bogotá D.C.
+
+databases:
+  - name: dimensiona-db
+    plan: free
+    databaseName: dimensiona
+    user: dimensiona

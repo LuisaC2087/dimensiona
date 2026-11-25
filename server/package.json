@@ -1,0 +1,23 @@
+{
+  "name": "dimensiona-logistica-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DIMENSIONA Smart Logistics: API (servicios unidos) + página de descarga del APK + app web",
+  "main": "src/index.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.3.0",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.5",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
+  }
+}
