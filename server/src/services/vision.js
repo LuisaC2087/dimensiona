@@ -63,16 +63,27 @@ visionRouter.post('/vision/identify', auth(), h(async (req, res) => {
   if (typeof image !== 'string' || !image || image.length > MAX_B64) throw bad('Imagen inválida o muy grande');
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(mediaType)) throw bad('Formato de imagen no soportado');
 
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': config.geminiKey },
-    body: JSON.stringify({
-      contents: [{ parts: [{ inline_data: { mime_type: mediaType, data: image } }, { text: PROMPT }] }],
-      generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.2 },
-    }),
+  const body = JSON.stringify({
+    contents: [{ parts: [{ inline_data: { mime_type: mediaType, data: image } }, { text: PROMPT }] }],
+    generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.2 },
   });
+  // Modelo configurado y, si Google lo retiró (404), los alias vigentes de Flash.
+  const models = [...new Set([config.geminiModel, 'gemini-flash-latest', 'gemini-flash-lite-latest'])];
+  let r;
+  for (const model of models) {
+    r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': config.geminiKey }, body,
+      signal: AbortSignal.timeout(45_000),
+    }).catch((e) => ({ ok: false, status: 0, text: async () => e.message }));
+    if (r.ok || r.status !== 404) break;
+    console.error(`[vision] modelo ${model} no disponible (404)`);
+  }
   if (r.status === 429) throw new HttpError(429, 'La IA está ocupada (límite gratuito). Intenta en unos segundos.');
-  if (!r.ok) throw new HttpError(502, 'El servicio de IA no respondió');
+  if (!r.ok) {
+    const detail = await r.text().catch(() => '');
+    console.error(`[vision] Gemini respondió ${r.status}: ${String(detail).slice(0, 300)}`);
+    throw new HttpError(502, 'El servicio de IA no respondió');
+  }
   const out = await r.json();
   const text = out?.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
   if (!text) return res.json({ objetos: [] });

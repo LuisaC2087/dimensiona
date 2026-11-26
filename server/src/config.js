@@ -19,7 +19,7 @@ export const config = {
   adminPassword: env.ADMIN_PASSWORD ?? '',
   seedDemo: (env.SEED_DEMO ?? 'true') !== 'false',
   geminiKey: env.GEMINI_API_KEY ?? '',
-  geminiModel: env.GEMINI_MODEL ?? 'gemini-2.5-flash',
+  geminiModel: env.GEMINI_MODEL ?? 'gemini-flash-latest',
   apkUrl: env.APK_URL ?? '',
   appVersion: env.APP_VERSION ?? '1.0.0',
   publicUrl: (env.PUBLIC_URL || env.RENDER_EXTERNAL_URL || `http://localhost:${env.PORT ?? 4000}`).replace(/\/$/, ''),
