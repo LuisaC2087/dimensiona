@@ -28,7 +28,7 @@ describe('textos de avisos (puro)', () => {
 describe('avisos de punta a punta', () => {
   let S, T, M, A, productId, ship;
   before(async () => {
-    S = await startServer();
+    S = await startServer({ DEMO_STEP_SECONDS: '0.3' });
     T = await S.login('tienda@demo.app', 'demo1234');
     M = await S.login('mensajero@demo.app', 'demo1234');
     A = await S.login('admin@dimensiona.app', 'admin-test-1');
@@ -146,6 +146,32 @@ describe('avisos de punta a punta', () => {
     await S.call('POST', `/api/admin/claims/${id}/respond`, { token: A, body: { response: 'Te la enviamos al correo.' } });
     const t = (await S.call('GET', '/api/notifications', { token: T })).body;
     assert.equal(t.items[0].kind, 'pqr.respuesta');
+  });
+
+  test('recorrido demo: todos los roles, verificación, novedad y entrega con avisos', async () => {
+    const s = (await S.call('POST', '/api/shipments', { token: T, body: {
+      items: [{ productId, qty: 1 }], recipientName: 'Demo Recorrido', recipientPhone: '3001112233', address: 'Cl 1', city: 'Bogotá' } })).body;
+    await S.call('POST', '/api/notifications/read', { token: A, body: {} });
+    const r = await S.call('POST', `/api/demo/shipments/${s.id}/simulate`, { token: T });
+    assert.equal(r.status, 200);
+    assert.equal(r.body.steps, 7);
+    assert.equal((await S.call('POST', `/api/demo/shipments/${s.id}/simulate`, { token: T })).status, 400); // ya en curso
+    await new Promise((ok) => setTimeout(ok, 3500));
+    const d = (await S.call('GET', `/api/shipments/${s.id}`, { token: T })).body;
+    assert.equal(d.status, 'entregado');
+    assert.deepEqual(d.events.map((e) => e.status), ['creado', 'asignado', 'asignado', 'recogido', 'en_ruta', 'novedad', 'en_ruta', 'entregado']);
+    assert.ok(d.verified?.matches);
+    assert.deepEqual(d.messages.map((m) => m.status_trigger), ['creado', 'en_ruta', 'novedad', 'en_ruta', 'entregado']);
+    const n = (await S.call('GET', '/api/notifications', { token: T })).body;
+    assert.equal(n.items[0].kind, 'envio.entregado');
+    const a = (await S.call('GET', '/api/notifications', { token: A })).body;
+    assert.ok(a.items.some((i) => i.kind === 'envio.novedad'));
+    assert.equal((await S.call('POST', `/api/demo/shipments/${s.id}/simulate`, { token: M })).status, 403);
+  });
+
+  test('las cuentas demo quedan con los términos vigentes', async () => {
+    const me = (await S.call('GET', '/api/auth/me', { token: T })).body;
+    assert.equal(me.terms.accepted, me.terms.current);
   });
 
   test('mensajero nuevo pendiente avisa a administración; la exportación de datos incluye los avisos', async () => {

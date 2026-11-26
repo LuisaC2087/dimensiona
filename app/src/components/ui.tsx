@@ -2,9 +2,9 @@
  * Componentes de interfaz constructivistas: bloques con borde grueso, sombra dura desplazada,
  * títulos condensados en mayúsculas y bandas diagonales.
  */
-import { type ReactNode, useState } from 'react';
+import { Children, type ReactNode, useState } from 'react';
 import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
   type StyleProp, type TextInputProps, type TextStyle, type ViewStyle, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +13,8 @@ import type { ShipmentStatus } from '../api/types';
 import { Icon, type IconName } from './Icon';
 import { getItem, setItem } from '../lib/storage';
 import { useEffect } from 'react';
+import { FadeIn, Float, NATIVE, reduceMotion, useAnimatedValue, useCountUp } from './motion';
+import { Mascot } from './Mascot';
 
 export function Title({ children, size = 30, color = colors.ink, style }: { children: ReactNode; size?: number; color?: string; style?: StyleProp<TextStyle> }) {
   return <Text style={[{ fontFamily: fonts.display, fontSize: size, lineHeight: size * 1.05, color, textTransform: 'uppercase', letterSpacing: 0.5 }, style]}>{children}</Text>;
@@ -28,9 +30,16 @@ export function Body({ children, style, muted, numberOfLines }: { children: Reac
 
 /** Encabezado con banda roja diagonal. */
 export function Header({ title, kicker, right, onBack, icon }: { title: string; kicker?: string; right?: ReactNode; onBack?: () => void; icon?: IconName }) {
+  const sweep = useAnimatedValue(0);
+  useEffect(() => {
+    if (reduceMotion()) return;
+    const a = Animated.timing(sweep, { toValue: 1, duration: 650, easing: Easing.out(Easing.exp), useNativeDriver: NATIVE });
+    a.start();
+    return () => a.stop();
+  }, [sweep]);
   return (
     <View style={hs.wrap}>
-      <View style={hs.band} />
+      <Animated.View style={[hs.band, { transform: [{ rotate: '-3deg' }, { translateX: sweep.interpolate({ inputRange: [0, 1], outputRange: [-700, 0] }) }] }]} />
       <View style={hs.row}>
         {onBack && (
           <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={onBack} style={hs.back} hitSlop={8}>
@@ -38,10 +47,10 @@ export function Header({ title, kicker, right, onBack, icon }: { title: string; 
           </Pressable>
         )}
         {icon && !onBack && <View style={{ width: 44, height: 44, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={26} color={colors.paper} /></View>}
-        <View style={{ flex: 1 }}>
+        <FadeIn style={{ flex: 1 }} distance={10}>
           {kicker && <Label color={colors.paper3}>{kicker}</Label>}
           <Title color={colors.paper} size={28} style={{ marginTop: 2 }}>{title}</Title>
-        </View>
+        </FadeIn>
         {right}
       </View>
     </View>
@@ -49,7 +58,7 @@ export function Header({ title, kicker, right, onBack, icon }: { title: string; 
 }
 const hs = StyleSheet.create({
   wrap: { backgroundColor: colors.ink, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.xl, overflow: 'hidden' },
-  band: { position: 'absolute', left: -40, right: -40, bottom: -18, height: 30, backgroundColor: colors.red, transform: [{ rotate: '-3deg' }] },
+  band: { position: 'absolute', left: -40, right: -40, bottom: -18, height: 30, backgroundColor: colors.red },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.paper },
 });
@@ -58,7 +67,12 @@ const hs = StyleSheet.create({
 export function Screen({ children, header, scroll = true, onRefresh, refreshing = false, padded = true, footer }: {
   children: ReactNode; header?: ReactNode; scroll?: boolean; onRefresh?: () => void; refreshing?: boolean; padded?: boolean; footer?: ReactNode;
 }) {
-  const content = <View style={[{ gap: space.lg }, padded && { padding: space.lg, paddingBottom: space.xxl * 2 }]}>{children}</View>;
+  const items = Children.toArray(children);
+  const content = (
+    <View style={[{ gap: space.lg }, padded && { padding: space.lg, paddingBottom: space.xxl * 2 }]}>
+      {items.map((c, i) => <FadeIn key={(c as { key?: string }).key ?? i} delay={Math.min(i, 8) * 55}>{c}</FadeIn>)}
+    </View>
+  );
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.ink }}>
       <View style={{ flex: 1, backgroundColor: colors.paper }}>
@@ -100,10 +114,13 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
   const shadow = variant === 'primary' ? colors.ink : variant === 'ink' ? colors.red : variant === 'ghost' ? 'transparent' : colors.ink;
   const off = variant === 'ghost' ? 0 : 4;
   const off_ = disabled || loading;
+  const press = useAnimatedValue(0);
+  const to = (v: number) => { if (!reduceMotion()) Animated.spring(press, { toValue: v, friction: 6, tension: 220, useNativeDriver: NATIVE }).start(); };
   return (
-    <View style={[{ marginRight: off, marginBottom: off, opacity: off_ ? 0.5 : 1 }, style]}>
+    <Animated.View style={[{ marginRight: off, marginBottom: off, opacity: off_ ? 0.5 : 1, transform: [{ scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.97] }) }] }, style]}>
       {off > 0 && <View style={[StyleSheet.absoluteFill, { backgroundColor: shadow, transform: [{ translateX: off }, { translateY: off }] }]} />}
       <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={off_} onPress={onPress}
+        onPressIn={() => to(1)} onPressOut={() => to(0)}
         style={({ pressed }) => [{
           minHeight: small ? 40 : 52, paddingHorizontal: small ? space.md : space.lg, backgroundColor: bg,
           borderWidth: variant === 'ghost' ? 0 : 3, borderColor: variant === 'danger' ? colors.redDark : colors.ink,
@@ -116,7 +133,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
           </>
         )}
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -173,13 +190,14 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
 }
 
 export function Stat({ label, value, accent, sub, icon }: { label: string; value: string; accent?: boolean; sub?: string; icon?: IconName }) {
+  const shown = useCountUp(value);
   return (
     <View style={{ flex: 1, minWidth: 140, backgroundColor: accent ? colors.red : colors.ink, padding: space.md, gap: 2 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         {icon && <Icon name={icon} size={16} color={accent ? colors.paper : colors.paper3} />}
         <Label color={accent ? colors.paper : colors.paper3}>{label}</Label>
       </View>
-      <Title color={colors.paper} size={26}>{value}</Title>
+      <Title color={colors.paper} size={26}>{shown}</Title>
       {sub && <Text style={{ color: accent ? colors.paper : colors.paper3, fontSize: 12 }}>{sub}</Text>}
     </View>
   );
@@ -216,7 +234,7 @@ export function SectionTitle({ children, action, icon }: { children: ReactNode; 
 export function Empty({ title, body, action, icon }: { title: string; body?: string; action?: ReactNode; icon?: IconName }) {
   return (
     <View style={{ alignItems: 'center', padding: space.xl, gap: space.md, borderWidth: 3, borderColor: colors.ink, borderStyle: 'dashed' }}>
-      {icon ? <Icon name={icon} size={54} color={colors.red} /> : <View style={{ width: 54, height: 54, borderRadius: 27, borderWidth: 8, borderColor: colors.red }} />}
+      <Float>{icon ? <Icon name={icon} size={54} color={colors.red} /> : <View style={{ width: 54, height: 54, borderRadius: 27, borderWidth: 8, borderColor: colors.red }} />}</Float>
       <Title size={20} style={{ textAlign: 'center' }}>{title}</Title>
       {body && <Body muted style={{ textAlign: 'center' }}>{body}</Body>}
       {action}
@@ -224,10 +242,11 @@ export function Empty({ title, body, action, icon }: { title: string; body?: str
   );
 }
 
+/** Pantalla de carga: Dimi, la caja mascota, camina mientras esperamos. */
 export function Loading({ label = 'Cargando…' }: { label?: string }) {
   return (
-    <View style={{ padding: space.xl, alignItems: 'center', gap: space.md }}>
-      <ActivityIndicator size="large" color={colors.red} />
+    <View style={{ padding: space.xl, alignItems: 'center', gap: space.sm }} accessibilityRole="progressbar" accessibilityLabel={label}>
+      <Mascot size={1.15} />
       <Label>{label}</Label>
     </View>
   );
@@ -310,12 +329,27 @@ export function Steps({ steps, current }: { steps: { label: string; icon: IconNa
         const on = i <= current;
         return (
           <View key={s.label} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
-            <View style={{ width: '100%', height: 6, backgroundColor: on ? colors.red : colors.paper3 }} />
+            <StepBar on={on} />
             <Icon name={i < current ? 'check-circle' : s.icon} size={20} color={on ? colors.ink : colors.grey} />
             <Text style={{ fontFamily: fonts.displayMedium, fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', color: on ? colors.ink : colors.grey }}>{s.label}</Text>
           </View>
         );
       })}
+    </View>
+  );
+}
+
+function StepBar({ on }: { on: boolean }) {
+  const v = useAnimatedValue(on ? 1 : 0);
+  useEffect(() => {
+    if (reduceMotion()) { v.setValue(on ? 1 : 0); return; }
+    const a = Animated.timing(v, { toValue: on ? 1 : 0, duration: 450, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    a.start();
+    return () => a.stop();
+  }, [v, on]);
+  return (
+    <View style={{ width: '100%', height: 6, backgroundColor: colors.paper3 }}>
+      <Animated.View style={{ height: 6, backgroundColor: colors.red, width: v.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />
     </View>
   );
 }

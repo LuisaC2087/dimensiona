@@ -8,6 +8,7 @@ import { buildPlan } from './logistics.js';
 import { loadServices } from './catalog.js';
 import { carrierInfo, createGuide, listCarriers, schedulePickup, track as carrierTrack } from '../carriers/index.js';
 import { customerMessagesFor, notifyAvailable, notifyUsers, shipmentChanged } from './notifications.js';
+import { config } from '../config.js';
 
 export const STATUS = ['creado', 'asignado', 'recogido', 'en_ruta', 'entregado', 'novedad', 'devuelto', 'cancelado'];
 export const STATUS_LABEL = {
@@ -334,4 +335,61 @@ shipmentsRouter.post('/track/:code/opt-out', h(async (req, res) => {
   const r = await one('UPDATE shipments SET recipient_opt_out=true WHERE upper(code)=upper($1) RETURNING id', [String(req.params.code).trim()]);
   if (!r) throw notFound('No encontramos esa guía');
   res.json({ ok: true });
+}));
+
+/**
+ * Recorrido demo: con las cuentas demo, la tienda ve en vivo el uso completo de la plataforma.
+ * El mensajero demo acepta el envío, verifica las medidas con AR, lo recoge, sale a ruta, reporta una
+ * novedad (avisa a administración), reintenta y entrega. Cada paso genera los mismos avisos que un envío real
+ * (tienda, administración y WhatsApp al cliente). Un paso cada DEMO_STEP_SECONDS (6 s por defecto).
+ * Solo con SEED_DEMO activo y cuentas @demo.app.
+ */
+const simulating = new Set();
+shipmentsRouter.post('/demo/shipments/:id/simulate', auth('tienda'), h(async (req, res) => {
+  if (!config.seedDemo || !req.user.email.endsWith('@demo.app')) throw forbidden('La simulación solo está disponible para las cuentas demo');
+  const s = shipmentOut(await getShipmentFor(req.user, req.params.id));
+  if (s.carrier !== 'propia') throw bad('La simulación es para envíos de la red DIMENSIONA');
+  if (s.status !== 'creado' || s.courier_id) throw bad('Solo se simula un envío recién creado');
+  if (simulating.has(s.id)) throw bad('Este envío ya se está simulando');
+  const courier = await one("SELECT id, name FROM users WHERE email='mensajero@demo.app' AND active");
+  if (!courier) throw bad('No existe el mensajero demo');
+  simulating.add(s.id);
+  const stepMs = Number(process.env.DEMO_STEP_SECONDS ?? 6) * 1000;
+  const first = String(s.recipient_name).split(' ')[0];
+  const move = (status, note, extra = {}) => async () => {
+    await query('UPDATE shipments SET status=$1, updated_at=now() WHERE id=$2', [status, s.id]);
+    await addEvent(s.id, status, courier.id, { note, receiverName: extra.receiver });
+    await shipmentChanged(s.id, status, { actorId: courier.id, note, receiver: extra.receiver });
+  };
+  const steps = [
+    async () => {
+      await query("UPDATE shipments SET courier_id=$1, status='asignado', updated_at=now() WHERE id=$2", [courier.id, s.id]);
+      await addEvent(s.id, 'asignado', courier.id, { note: `${courier.name} aceptó el envío desde «Disponibles»` });
+      await shipmentChanged(s.id, 'asignado', { actorId: courier.id });
+    },
+    async () => {
+      const b = s.packages?.[0]?.box ?? { length: 20, width: 15, height: 10 };
+      const dims = [b.length, b.width, b.height].map(Number);
+      const kg = s.quote?.chargeableKg ?? null;
+      const verified = { dims, weightKg: null, chargeableKg: kg, declaredChargeableKg: kg, matches: true, at: new Date().toISOString(), by: courier.name };
+      await query('UPDATE shipments SET verified=$1, updated_at=now() WHERE id=$2', [JSON.stringify(verified), s.id]);
+      await addEvent(s.id, 'asignado', courier.id, { note: `Medidas verificadas con AR: ${dims.join(' × ')} cm ✓` });
+    },
+    move('recogido', 'Paquete recogido en la tienda'),
+    move('en_ruta', 'Saliendo hacia el destino'),
+    move('novedad', `Portería cerrada: el mensajero llama a ${first} y reintenta`),
+    move('en_ruta', 'Reintento de entrega'),
+    move('entregado', 'Entrega confirmada con foto de evidencia', { receiver: s.recipient_name }),
+  ];
+  (async () => {
+    try {
+      for (const step of steps) {
+        await new Promise((r) => setTimeout(r, stepMs));
+        const cur = await one('SELECT status FROM shipments WHERE id=$1', [s.id]);
+        if (!cur || cur.status === 'cancelado') break;
+        await step();
+      }
+    } catch (e) { console.error('[demo]', e.message); } finally { simulating.delete(s.id); }
+  })();
+  res.json({ ok: true, stepSeconds: stepMs / 1000, steps: steps.length });
 }));

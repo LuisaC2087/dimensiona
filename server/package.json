@@ -1,6 +1,6 @@
 {
   "name": "dimensiona-logistica-server",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "type": "module",
   "description": "DIMENSIONA Smart Logistics: API (servicios unidos) + página de descarga del APK + app web",

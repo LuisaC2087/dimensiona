@@ -2,6 +2,7 @@
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
 import { config } from './config.js';
+import { LEGAL_VERSION } from './services/legal.js';
 import { one, query } from './db.js';
 
 const BOXES = [
@@ -63,7 +64,10 @@ export async function seed() {
     if (!config.adminPassword) console.log(`[seed] Administrador creado: ${config.adminEmail} / ${pwd}  (cámbiala definiendo ADMIN_PASSWORD)`);
   }
 
-  if (config.seedDemo) await seedDemo();
+  if (config.seedDemo) {
+    await seedDemo();
+    await query("UPDATE users SET terms_version=$1, terms_accepted_at=coalesce(terms_accepted_at, now()) WHERE email LIKE '%@demo.app' AND terms_version IS DISTINCT FROM $1", [LEGAL_VERSION]);
+  }
 }
 
 async function seedDemo() {

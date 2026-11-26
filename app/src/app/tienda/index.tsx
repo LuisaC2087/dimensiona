@@ -5,7 +5,8 @@ import type { Shipment } from '../../api/types';
 import { Icon, type IconName } from '../../components/Icon';
 import { ShipmentCard } from '../../components/ShipmentCard';
 import { Bell } from '../../components/Bell';
-import { Button, Card, Empty, ErrorBox, Header, Loading, Row, Screen, SectionTitle, Stat } from '../../components/ui';
+import { Body, Button, Card, Empty, ErrorBox, Header, Loading, Row, Screen, SectionTitle, Stat, Title } from '../../components/ui';
+import { FadeIn, Pulse } from '../../components/motion';
 import { money } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
 import { useAuth } from '../../state/auth';
@@ -21,7 +22,7 @@ const ACTIONS: { icon: IconName; title: string; sub: string; href: Href; primary
 function ActionTile({ a }: { a: (typeof ACTIONS)[number] }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`${a.title} ${a.sub}`} onPress={() => router.push(a.href)}
-      style={({ pressed }) => ({ width: '48%', flexGrow: 1, minHeight: 104, padding: space.md, gap: 6, justifyContent: 'space-between',
+      style={({ pressed }) => ({ width: '100%', flexGrow: 1, minHeight: 104, padding: space.md, gap: 6, justifyContent: 'space-between',
         backgroundColor: a.primary ? colors.red : colors.ink, borderWidth: 3, borderColor: colors.ink, transform: pressed ? [{ translateX: 2 }, { translateY: 2 }] : [] })}>
       <Icon name={a.icon} size={34} color={colors.paper} />
       <View>
@@ -65,8 +66,20 @@ export default function TiendaInicio() {
   return (
     <Screen header={<Header title={store?.name ?? 'Mi tienda'} kicker={`Hola, ${user?.name.split(' ')[0] ?? ''}`} right={<Bell />} />} onRefresh={reload} refreshing={refreshing}>
       <Row wrap style={{ gap: space.sm }}>
-        {ACTIONS.map((a) => <ActionTile key={a.title} a={a} />)}
+        {ACTIONS.map((a, i) => <FadeIn key={a.title} delay={80 + i * 70} style={{ width: '48%', flexGrow: 1 }}><ActionTile a={a} /></FadeIn>)}
       </Row>
+
+      {user?.email.endsWith('@demo.app') && (
+        <Card accent={colors.red} onPress={() => router.push('/recorrido/nuevo')}>
+          <Row>
+            <Pulse><View style={{ width: 48, height: 48, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' }}><Icon name="play" size={30} color={colors.paper} /></View></Pulse>
+            <View style={{ flex: 1 }}>
+              <Title size={20}>Ver la app en acción</Title>
+              <Body muted>Un envío completo en menos de un minuto, desde los ojos de cada rol.</Body>
+            </View>
+          </Row>
+        </Card>
+      )}
 
       <ErrorBox message={error} onRetry={reload} />
       {loading && !data ? <Loading /> : (

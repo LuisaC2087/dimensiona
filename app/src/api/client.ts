@@ -146,6 +146,7 @@ export const api = {
   setNotificationPrefs: (b: { push?: boolean; customers?: boolean }) => put<{ ok: true }>('/notifications/prefs', b),
   registerPushToken: (token: string, platform: string) => post<{ ok: true }>('/notifications/push-token', { token, platform }),
   removePushToken: (token: string) => del<{ ok: true }>('/notifications/push-token', { token }),
+  simulateDemo: (id: string) => post<{ ok: true; stepSeconds: number }>(`/demo/shipments/${id}/simulate`),
   optOut: (code: string) => post<{ ok: true }>(`/track/${encodeURIComponent(code)}/opt-out`),
   adminMessages: () => get<AdminMessages>('/admin/messages'),
 };

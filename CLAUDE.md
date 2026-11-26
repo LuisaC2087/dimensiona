@@ -26,7 +26,7 @@ render.yaml  Blueprint de Render (web + PostgreSQL)
 
 ## Comandos (antes de terminar una tarea, todo en verde)
 ```bash
-cd server && npm test                       # 64 pruebas: unitarias + integración de la API (test/_server.js levanta el servidor)
+cd server && npm test                       # 66 pruebas: unitarias + integración de la API (test/_server.js levanta el servidor)
 cd app && npx jest && npx tsc --noEmit && npx expo lint
 cd app && npx expo export -p web            # la web que sirve el servidor en /app
 cd server && npm run dev                    # local: PGlite embebido si no hay DATABASE_URL

@@ -11,6 +11,13 @@
 | **Administrador** | Panel de métricas, aprobación de mensajeros, asignación de envíos, catálogo de cajas y tarifas por zona. |
 | **Cliente final** | Rastrea su envío sin cuenta en `/rastreo/<código>`. |
 
+## Novedades v1.3 · Demo y movimiento
+
+- **Recorrido en vivo** (cuentas demo): «Ver la app en acción» en el inicio de la tienda, o «Simular recorrido» en un envío. Un envío real avanza solo en menos de un minuto (asignación, verificación de medidas con AR, recogida, ruta, novedad, reintento y entrega) y la pantalla muestra qué ve cada rol: tienda, mensajero, administración y cliente final, con los avisos reales.
+- **Dimi**, la mascota: una caja kawaii que camina en las pantallas de carga.
+- **Movimiento** en toda la app y en la página: entradas escalonadas, banda roja que barre los encabezados, cifras que cuentan, botones con resorte, campana que se sacude con avisos nuevos. Respeta «Reducir movimiento» del sistema.
+- Logo simplificado: la caja isométrica sin la flecha de medida.
+
 ## Novedades v1.2 · Avisos
 
 - **Bandeja de avisos** en la app (campana con contador) para cada rol: cambios de estado de los envíos, novedades, ajustes de medidas, envíos disponibles cerca (mensajeros), facturas, pagos, PQR y mensajeros por aprobar (administración).
@@ -25,7 +32,7 @@
 
 ## Novedades v1.1
 
-- **Marca**: logo (caja isométrica + cota de medida), íconos en toda la app y manual de marca en `/marca`.
+- **Marca**: logo (caja isométrica), íconos en toda la app y manual de marca en `/marca`.
 - **Transportadoras**: Servientrega y Coordinadora en la misma cotización que la red propia; guía, recogida agendada (día y franja) y rastreo sincronizado. Funcionan en **modo simulado** hasta que se configuren las credenciales del contrato con cada transportadora (no publican API abierta; la documentación la entregan al firmar).
 - **Facturación**: cuenta de cobro mensual por tienda (IVA incluido, configurable), impresión/PDF, pago y anulación; **liquidaciones** de recaudos contra entrega a tiendas y de pagos a mensajeros.
 - **Rótulo** de envío 10 × 15 cm con QR de rastreo, listo para imprimir.

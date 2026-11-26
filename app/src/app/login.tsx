@@ -7,6 +7,7 @@ import { Body, Button, ErrorBox, Field, Label, Row, Title } from '../components/
 import { homeFor, useAuth } from '../state/auth';
 import { colors, fonts, space } from '../theme';
 import { LogoMark } from '../components/Logo';
+import { FadeIn, Float, Pop } from '../components/motion';
 
 const DEMOS = [
   { label: 'Tienda', email: 'tienda@demo.app' },
@@ -36,12 +37,12 @@ export default function Login() {
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         {/* Composición constructivista: círculo, diagonal y bloque de título */}
         <View style={s.hero}>
-          <View style={s.circle} />
-          <View style={s.diag} />
-          <View style={{ marginBottom: space.sm, alignSelf: 'flex-start', backgroundColor: colors.ink, padding: 8 }}><LogoMark size={56} negative /></View>
-          <Text style={s.kicker}>SMART LOGISTICS</Text>
-          <Text style={s.logo}>DIMEN{'\n'}SIONA</Text>
-          <Text style={s.tagline}>Mide. Empaca. Envía.</Text>
+          <Pop style={s.circle}><View /></Pop>
+          <FadeIn style={s.diag} distance={60}><View /></FadeIn>
+          <Float style={{ marginBottom: space.sm, alignSelf: 'flex-start' }}><Pop><View style={{ backgroundColor: colors.ink, padding: 8 }}><LogoMark size={56} negative /></View></Pop></Float>
+          <FadeIn delay={120}><Text style={s.kicker}>SMART LOGISTICS</Text></FadeIn>
+          <FadeIn delay={220}><Text style={s.logo}>DIMEN{'\n'}SIONA</Text></FadeIn>
+          <FadeIn delay={340}><Text style={s.tagline}>Mide. Empaca. Envía.</Text></FadeIn>
         </View>
 
         <View style={s.panel}>

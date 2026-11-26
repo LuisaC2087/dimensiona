@@ -29,7 +29,7 @@ services:
       - key: APK_URL
         sync: false # enlace al APK (EAS o GitHub Releases)
       - key: APP_VERSION
-        value: 1.2.0
+        value: 1.3.0
       - key: GEMINI_API_KEY
         sync: false # opcional: reconocimiento con IA (gratis en aistudio.google.com)
       - key: LEGAL_COMPANY
