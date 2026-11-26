@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DIMENSIONA · Smart Logistics</title>
-<meta name="description" content="Mide tus productos con la cámara y realidad aumentada, elige la caja justa, cotiza y gestiona tus envíos. Para emprendimientos que venden por Instagram y WhatsApp.">
+<meta name="description" content="Deja de pagar por enviar aire. Mide tus productos con la cámara, empácalos en la caja justa y compara envíos en segundos. Gratis para emprendedores de Instagram y WhatsApp.">
 <meta name="theme-color" content="#D7261E">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta property="og:title" content="DIMENSIONA · Smart Logistics">
-<meta property="og:description" content="Mide tus productos con realidad aumentada, empaca en la caja justa y envía.">
+<meta property="og:description" content="Apunta la cámara, mide tu producto y envíalo en la caja justa. Deja de pagar por enviar aire.">
 <meta property="og:image" content="/brand/app-icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,8 +25,8 @@ body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 v
 a { color: inherit; }
 .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
 h1, h2, h3, .btn, .tag, nav a { font-family: var(--display); text-transform: uppercase; letter-spacing: .02em; }
-h1 { font-size: clamp(52px, 15vw, 128px); line-height: .86; margin: 0; font-weight: 700; }
-h2 { font-size: clamp(30px, 7vw, 54px); line-height: .95; margin: 0 0 20px; font-weight: 700; }
+h1 { font-size: clamp(52px, 14vw, 120px); line-height: .98; margin: 0; font-weight: 700; }
+h2 { font-size: clamp(30px, 7vw, 54px); line-height: 1.06; margin: 0 0 20px; font-weight: 700; }
 h3 { font-size: 22px; margin: 0 0 6px; font-weight: 700; }
 p { margin: 0 0 12px; }
 
@@ -43,13 +43,23 @@ nav a.cta { background: var(--red); padding: 6px 12px; }
 
 /* héroe */
 .hero { position: relative; padding: 48px 0 72px; overflow: hidden; }
-.hero::before { content: ''; position: absolute; left: -10%; right: -10%; top: 58%; height: 120px; background: var(--red); transform: rotate(-8deg); z-index: 0; }
+.hero::before { content: ''; position: absolute; left: -10%; right: -10%; bottom: -40px; height: 90px; background: var(--red); transform: rotate(-4deg); z-index: 0; }
 .hero::after { content: ''; position: absolute; width: 360px; height: 360px; border-radius: 50%; border: 34px solid var(--ink); right: -120px; top: -90px; z-index: 0; }
 .hero .wrap { position: relative; z-index: 1; display: grid; gap: 28px; }
 @media (min-width: 860px) { .hero .wrap { grid-template-columns: 1.3fr 1fr; align-items: center; } }
 .kicker { display: inline-block; background: var(--ink); color: var(--paper); font: 600 14px var(--display); letter-spacing: .12em; padding: 4px 10px; text-transform: uppercase; margin-bottom: 14px; }
 .hero h1 span { color: var(--red); display: block; }
-.lead { font-size: 19px; max-width: 34ch; background: var(--paper); padding: 10px 0; }
+.lead { font-size: 20px; line-height: 1.5; max-width: 36ch; margin: 18px 0 0; }
+.lead strong { color: var(--red); }
+.perks { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0; margin: 16px 0 0; font: 600 15px var(--body); }
+.perks li::before { content: '✓ '; color: var(--red); font-weight: 700; }
+.hero { padding-bottom: 96px; }
+.benefits { display: grid; gap: 18px; }
+@media (min-width: 760px) { .benefits { grid-template-columns: repeat(3, 1fr); } }
+.benefit { border-top: 8px solid var(--red); padding-top: 12px; }
+.benefit b { display: block; font: 700 28px/1.05 var(--display); text-transform: uppercase; margin-bottom: 6px; }
+.quote { font: 700 clamp(26px, 5vw, 40px)/1.22 var(--display); text-transform: uppercase; max-width: 22ch; margin: 0; }
+.quote em { color: var(--red); font-style: normal; }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
 .btn { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 22px; font-size: 19px; font-weight: 700; text-decoration: none; border: 3px solid var(--ink); background: var(--ink); color: var(--paper); box-shadow: 6px 6px 0 var(--red); transition: transform .1s, box-shadow .1s; cursor: pointer; }
 .btn:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--red); }
@@ -69,16 +79,16 @@ section { padding: 64px 0; }
 .band { background: var(--ink); color: var(--paper); position: relative; }
 .band h2 { color: var(--paper); }
 .band h2 em { color: var(--red); font-style: normal; }
-.steps { display: grid; gap: 16px; counter-reset: s; }
+.steps { display: grid; gap: 34px 16px; counter-reset: s; margin-top: 40px; }
 @media (min-width: 720px) { .steps { grid-template-columns: repeat(4, 1fr); } }
 .step { border: 3px solid var(--paper); padding: 18px; position: relative; }
 .step::before { counter-increment: s; content: counter(s); position: absolute; top: -22px; left: 14px; width: 40px; height: 40px; background: var(--red); color: var(--paper); font: 700 24px/40px var(--display); text-align: center; }
-.step:nth-child(even) { transform: translateY(14px); }
+@media (min-width: 720px) { .step:nth-child(even) { transform: translateY(14px); } }
 .step p { color: #CFC6B3; font-size: 15px; margin: 0; }
 
 .diff { display: grid; gap: 24px; align-items: center; }
 @media (min-width: 860px) { .diff { grid-template-columns: 1fr 1fr; } }
-.big-num { font: 700 clamp(72px, 20vw, 160px)/.85 var(--display); color: var(--red); }
+.big-num { font: 700 clamp(64px, 17vw, 150px)/1 var(--display); color: var(--red); margin-bottom: 14px; white-space: nowrap; }
 .compare { border: 3px solid var(--ink); background: var(--paper-2); }
 .compare div { display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 2px solid var(--ink); gap: 12px; }
 .compare div:last-child { border-bottom: 0; background: var(--ink); color: var(--paper); font-weight: 600; }
@@ -122,8 +132,8 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
 :focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
 
 /* ── Movimiento ── */
-@media (max-width: 640px) { .hero::after { width: 240px; height: 240px; border-width: 26px; right: -130px; top: -120px; } }
-@keyframes sweep { from { transform: translateX(-110%) rotate(-8deg); } to { transform: translateX(0) rotate(-8deg); } }
+@media (max-width: 640px) { .hero::after { width: 200px; height: 200px; border-width: 24px; right: -110px; top: -168px; } .kicker { font-size: 12px; } }
+@keyframes sweep { from { transform: translateX(-110%) rotate(-4deg); } to { transform: translateX(0) rotate(-4deg); } }
 @keyframes ring-in { from { transform: scale(.3) rotate(-90deg); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes rise { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes phone-in { from { transform: translateY(60px) rotate(14deg); opacity: 0; } to { transform: rotate(4deg); opacity: 1; } }
@@ -138,7 +148,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
 .phone { animation: phone-in .9s .35s cubic-bezier(.2,.8,.2,1) both, bob 5s 1.4s ease-in-out infinite; }
 .reveal { opacity: 0; transform: translateY(36px); transition: opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1); }
 .reveal.in { opacity: 1; transform: none; }
-.step.reveal.in:nth-child(even) { transform: translateY(14px); }
+@media (min-width: 720px) { .step.reveal.in:nth-child(even) { transform: translateY(14px); } }
 .role { transition: transform .15s, box-shadow .15s; }
 .role:hover { transform: translate(-3px, -3px); box-shadow: 11px 11px 0 var(--red); }
 .step { transition: background .2s; }
@@ -167,13 +177,14 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
 <section class="hero">
   <div class="wrap">
     <div>
-      <span class="kicker">Smart Logistics Platform</span>
+      <span class="kicker">Para emprendedores de Instagram y WhatsApp</span>
       <h1>Mide.<span>Empaca.</span>Envía.</h1>
-      <p class="lead">Apunta la cámara a tu producto: la realidad aumentada lo mide, te dice qué caja usar y cuánto cuesta enviarlo. Hecho para emprendimientos que venden por Instagram y WhatsApp.</p>
+      <p class="lead">Deja de <strong>pagar por enviar aire</strong>. Apunta la cámara a tu producto y en segundos sabes cuánto mide, en qué caja va y cuánto cuesta enviarlo. Sin metro, sin adivinar, sin sorpresas.</p>
       <div class="actions">
-        <a class="btn" id="apk-btn" href="/descargar" download>⬇ Descargar APK</a>
-        <a class="btn alt" href="/app/">Usar en el navegador</a>
+        <a class="btn" id="apk-btn" href="/descargar" download>⬇ Descárgala gratis</a>
+        <a class="btn alt" href="/app/">Pruébala ya en el navegador</a>
       </div>
+      <ul class="perks"><li>Gratis</li><li>Sin tarjeta</li><li>Demo guiada para probar ya</li></ul>
     </div>
     <div class="phone" aria-hidden="true">
       <div class="screen">
@@ -192,7 +203,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
           <circle cx="140" cy="120" r="18" fill="none" stroke="#F8F4EC" stroke-width="3"/>
           <line x1="140" y1="96" x2="140" y2="108" stroke="#F8F4EC" stroke-width="3"/><line x1="140" y1="132" x2="140" y2="144" stroke="#F8F4EC" stroke-width="3"/>
         </svg>
-        <div class="bar">Caja L · 87% llena<small>Nacional estándar · $16.450 · ahorras $4.200</small></div>
+        <div class="bar">Caja M · 87% llena<small>Ahorras $4.200 en este envío</small></div>
       </div>
     </div>
   </div>
@@ -200,12 +211,12 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
 
 <section class="band" id="como">
   <div class="wrap">
-    <h2>De la cámara <em>a la puerta</em></h2>
+    <h2>Del celular <em>a la puerta de tu cliente</em></h2>
     <div class="steps">
-      <div class="step"><h3>Mide con AR</h3><p>Apunta al producto. ARCore detecta sus caras y la IA lo reconoce: largo, ancho y alto en segundos.</p></div>
-      <div class="step"><h3>Caja justa</h3><p>El optimizador 3D acomoda tus productos y elige la caja más pequeña. Menos aire, menos peso volumétrico.</p></div>
-      <div class="step"><h3>Cotiza</h3><p>Compara servicios local, regional y nacional, con seguro y pago contra entrega.</p></div>
-      <div class="step"><h3>Envía y rastrea</h3><p>Un mensajero recoge, verifica medidas con AR y entrega. Tu cliente sigue la guía por WhatsApp.</p></div>
+      <div class="step"><h3>Apunta y mide</h3><p>La realidad aumentada toma largo, ancho y alto en segundos, y la IA te dice qué producto es. Lo mides una vez y queda guardado.</p></div>
+      <div class="step"><h3>La caja perfecta</h3><p>Acomodamos tus productos en 3D y elegimos la caja más pequeña donde caben. Cero aire, cero sobrecostos.</p></div>
+      <div class="step"><h3>Compara y elige</h3><p>Red DIMENSIONA, Servientrega y Coordinadora en una sola cotización, con seguro y pago contra entrega. Tú eliges.</p></div>
+      <div class="step"><h3>Cliente feliz</h3><p>Le avisamos por WhatsApp cuando su pedido sale, va en camino y llega. Lo sigue en vivo sin descargar nada.</p></div>
     </div>
   </div>
 </section>
@@ -213,26 +224,37 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
 <section>
   <div class="wrap diff">
     <div>
-      <div class="big-num">−30%</div>
-      <h2>de aire en cada caja</h2>
-      <p>Las transportadoras cobran por el <strong>peso volumétrico</strong> (largo × ancho × alto ÷ 5000), no solo por lo que pesa. Una caja «por si acaso» te cuesta en cada envío. DIMENSIONA sabe cuánto ocupa realmente tu producto <em>antes</em> de enviarlo.</p>
+      <div class="big-num">5 → 2 kg</div>
+      <h2>Mismo producto, menos de la mitad del cobro</h2>
+      <p>Las transportadoras no cobran solo lo que pesa tu producto: cobran el <strong>espacio que ocupa la caja</strong> (largo × ancho × alto ÷ 5000). Esa caja «por si acaso» te sale cara en cada envío. Con DIMENSIONA sabes el tamaño exacto <em>antes</em> de despachar y dejas de regalar plata.</p>
     </div>
     <div class="compare" role="table" aria-label="Ejemplo de ahorro">
       <div role="row"><span>Producto</span><b>2 velas · frágil</b></div>
       <div role="row"><span>Caja a ojo (40×30×20)</span><b>5 kg cobrables</b></div>
       <div role="row"><span>Caja DIMENSIONA (30×20×15)</span><b>2 kg cobrables</b></div>
-      <div role="row"><span>Ahorro por envío nacional</span><b>≈ $8.400</b></div>
+      <div role="row"><span>Ahorro en un envío nacional</span><b>≈ $8.400</b></div>
+    </div>
+  </div>
+</section>
+
+<section style="background: var(--ink); color: var(--paper)">
+  <div class="wrap" style="display:grid; gap:28px">
+    <p class="quote">Vende más, <em>envía mejor</em> y deja la logística en piloto automático.</p>
+    <div class="benefits">
+      <div class="benefit"><b>Ahorra en cada envío</b>Pagas el tamaño real de tu paquete, no el de una caja de más.</div>
+      <div class="benefit"><b>Gana tiempo</b>Mides una vez, cotizas en un toque e imprimes el rótulo con QR. Se acabó la libreta y el metro.</div>
+      <div class="benefit"><b>Clientes que vuelven</b>Saben dónde va su pedido en todo momento, con avisos por WhatsApp y rastreo en vivo.</div>
     </div>
   </div>
 </section>
 
 <section id="transportadoras">
   <div class="wrap">
-    <h2>Envía con quien más te convenga</h2>
+    <h2>Tú eliges quién lo lleva</h2>
     <div class="roles">
-      <div class="role"><span class="tag">Mismo día</span><h3>Red DIMENSIONA</h3><p>Mensajeros de la red recogen en tu puerta y entregan en tu ciudad. Verifican las medidas con AR al recoger.</p></div>
-      <div class="role"><span class="tag">Nacional</span><h3>Servientrega</h3><p>Generamos la guía, agendas la recogida en la app y sigues el rastreo desde DIMENSIONA.</p></div>
-      <div class="role"><span class="tag">Nacional</span><h3>Coordinadora</h3><p>Compara su precio con los demás en la misma cotización y elige el más barato o el más rápido.</p></div>
+      <div class="role"><span class="tag">Mismo día</span><h3>Red DIMENSIONA</h3><p>Mensajeros que recogen en tu puerta y entregan en tu ciudad el mismo día. Verifican las medidas al recoger: lo que cotizas es lo que pagas.</p></div>
+      <div class="role"><span class="tag">Nacional</span><h3>Servientrega</h3><p>Cobertura nacional. La guía se genera sola, agendas la recogida en la app y sigues el rastreo sin salir de DIMENSIONA.</p></div>
+      <div class="role"><span class="tag">Nacional</span><h3>Coordinadora</h3><p>Su precio aparece junto a los demás en la misma cotización. Elige el más barato o el más rápido, en un toque.</p></div>
     </div>
     <p class="note" style="margin-top:18px">La conexión con cada transportadora usa las credenciales de tu contrato con ella. Las marcas pertenecen a sus respectivos dueños.</p>
   </div>
@@ -240,14 +262,14 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
 
 <section id="roles" style="background: var(--paper-2)">
   <div class="wrap">
-    <h2>Una app, tres roles</h2>
+    <h2>Una app para todo el equipo</h2>
     <div class="roles">
-      <div class="role"><span class="tag">Emprendedor</span><h3>Tienda</h3>
-        <ul><li>Catálogo con medidas tomadas por cámara</li><li>Caja recomendada y vista 3D del empaque</li><li>Cotización y guía en un toque</li><li>Contra entrega y enlace de rastreo por WhatsApp</li><li>Facturación mensual y liquidación de recaudos</li><li>Rótulo con QR listo para imprimir</li></ul></div>
-      <div class="role"><span class="tag">Calle</span><h3>Mensajero</h3>
-        <ul><li>Envíos disponibles cerca</li><li>Verificación de medidas con AR al recoger</li><li>Prueba de entrega con foto</li><li>Ganancias y recaudos del día</li></ul></div>
-      <div class="role"><span class="tag">Control</span><h3>Administrador</h3>
-        <ul><li>Métricas de la operación</li><li>Aprobación de mensajeros</li><li>Catálogo de cajas y tarifas</li><li>Asignación y novedades</li><li>Facturación, pagos y PQR</li></ul></div>
+      <div class="role"><span class="tag">Tú vendes</span><h3>Tienda</h3>
+        <ul><li>Tu catálogo medido con la cámara</li><li>La caja ideal, con vista 3D del empaque</li><li>Cotiza y crea la guía en un toque</li><li>Cobra contra entrega y recibe tu plata</li><li>Avisos automáticos a tus clientes por WhatsApp</li><li>Rótulo con QR y facturación del mes, listos</li></ul></div>
+      <div class="role"><span class="tag">Tú ganas</span><h3>Mensajero</h3>
+        <ul><li>Envíos cerca de ti, con lo que ganas en cada uno</li><li>Mide el paquete con la cámara al recogerlo</li><li>Prueba de entrega con foto</li><li>Tus ganancias del día, claras</li></ul></div>
+      <div class="role"><span class="tag">Todo bajo control</span><h3>Administración</h3>
+        <ul><li>La operación en un solo panel</li><li>Alertas antes de que algo falle</li><li>Cajas, tarifas y transportadoras</li><li>Facturación, pagos y liquidaciones</li><li>PQR con plazos al día</li></ul></div>
     </div>
   </div>
 </section>
@@ -255,26 +277,27 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
 <section id="descargar">
   <div class="wrap">
     <div>
-      <h2>Descarga la app</h2>
-      <p>APK para Android 8 o superior. La medición con realidad aumentada necesita un teléfono compatible con <strong>ARCore</strong> (la mayoría de gama media y alta). En otros teléfonos puedes medir con una foto y una tarjeta de referencia.</p>
+      <h2>Empieza hoy. Es gratis.</h2>
+      <p>Descárgala en tu Android y crea tu cuenta en un minuto. ¿Solo quieres curiosear? Entra con la cuenta demo y toca <strong>«Ver demostración guiada»</strong>: la app se maneja sola y te muestra todo.</p>
+      <p class="note">Android 8 o superior. La medición con realidad aumentada funciona en teléfonos compatibles con ARCore (la mayoría de gama media y alta); en los demás mides con una foto y una tarjeta de referencia.</p>
       <div class="actions">
-        <a class="btn" id="apk-btn-2" href="/descargar" download>⬇ Descargar APK <span id="apk-ver"></span></a>
-        <a class="btn alt" href="/app/">Abrir versión web</a>
+        <a class="btn" id="apk-btn-2" href="/descargar" download>⬇ Descárgala gratis <span id="apk-ver"></span></a>
+        <a class="btn alt" href="/app/">Pruébala en el navegador</a>
       </div>
       <ol class="note">
         <li>Descarga el archivo en tu teléfono Android.</li>
         <li>Ábrelo y permite «instalar apps de esta fuente» si te lo pide.</li>
-        <li>Entra con tu cuenta, o prueba con la cuenta demo <strong>tienda@demo.app / demo1234</strong>.</li>
+        <li>Crea tu cuenta, o entra con la demo <strong>tienda@demo.app / demo1234</strong>.</li>
       </ol>
       <p class="note" id="apk-missing" hidden>El APK se está compilando. Mientras tanto, usa la versión web.</p>
     </div>
-    <div class="qr"><div id="qr"></div>Escanea para descargar en tu teléfono</div>
+    <div class="qr"><div id="qr"></div>Escanéalo con tu celular y descárgala</div>
   </div>
 </section>
 
 <section id="rastreo">
   <div class="wrap">
-    <h2>Rastrea tu envío</h2>
+    <h2>¿Esperas un pedido? Míralo aquí</h2>
     <form class="track-form" id="track-form">
       <label for="code" style="position:absolute;left:-9999px">Código de guía</label>
       <input id="code" name="code" placeholder="DM1234ABC" autocomplete="off" maxlength="12" required>
