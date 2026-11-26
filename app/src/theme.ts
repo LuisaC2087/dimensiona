@@ -3,9 +3,9 @@
  * mayúsculas, bloques duros, sombras desplazadas sin desenfoque y diagonales.
  */
 export const colors = {
-  paper: '#EFE6D3',
-  paper2: '#E4D8BE',
-  paper3: '#D8CAA9',
+  paper: '#F8F4EC',
+  paper2: '#EEE6D6',
+  paper3: '#DDD2BC',
   ink: '#141414',
   ink2: '#2A2826',
   red: '#D7261E',

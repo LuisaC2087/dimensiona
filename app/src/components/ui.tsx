@@ -149,7 +149,7 @@ export function Field({ label, hint, error, style, ...props }: TextInputProps & 
         onFocus={(e) => { setFocus(true); props.onFocus?.(e); }}
         onBlur={(e) => { setFocus(false); props.onBlur?.(e); }}
         style={{
-          minHeight: 50, borderWidth: 3, borderColor: error ? colors.red : colors.ink, backgroundColor: focus ? colors.white : '#F7F1E4',
+          minHeight: 50, borderWidth: 3, borderColor: error ? colors.red : colors.ink, backgroundColor: focus ? colors.white : '#FFFDF8',
           paddingHorizontal: space.md, fontSize: 17, color: colors.ink, ...(props.multiline ? { minHeight: 90, paddingTop: 12, textAlignVertical: 'top' } : {}),
         }}
       />

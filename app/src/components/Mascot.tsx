@@ -65,11 +65,11 @@ export function Mascot({ size = 1 }: { size?: number }) {
         <Animated.View style={{ position: 'absolute', left: 0, top: 0, width: 120, height: 120, transform: [{ translateY: bounce }, { rotate: tilt }] }}>
           {/* solapas de la caja */}
           <View style={{ position: 'absolute', top: 18, left: 20, width: 40, height: 14, backgroundColor: PAPER, borderWidth: 3, borderColor: INK, transform: [{ skewX: '-18deg' }, { rotate: '-8deg' }] }} />
-          <View style={{ position: 'absolute', top: 18, left: 60, width: 40, height: 14, backgroundColor: '#E4D8BE', borderWidth: 3, borderColor: INK, transform: [{ skewX: '18deg' }, { rotate: '8deg' }] }} />
+          <View style={{ position: 'absolute', top: 18, left: 60, width: 40, height: 14, backgroundColor: '#EEE6D6', borderWidth: 3, borderColor: INK, transform: [{ skewX: '18deg' }, { rotate: '8deg' }] }} />
           {/* cuerpo */}
           <View style={{ position: 'absolute', top: 28, left: 18, width: 84, height: 68, backgroundColor: PAPER, borderWidth: 4, borderColor: INK, borderRadius: 6, overflow: 'hidden' }}>
             <View style={{ position: 'absolute', top: 0, left: 35, width: 14, height: 18, backgroundColor: RED }} />
-            <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 14, backgroundColor: '#E4D8BE' }} />
+            <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 14, backgroundColor: '#EEE6D6' }} />
           </View>
           {arm(armL, 16)}
           {arm(armR, 97)}

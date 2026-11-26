@@ -18,9 +18,9 @@ const date = (d) => new Date(d).toLocaleDateString('es-CO', { year: 'numeric', m
 
 const PAGE = (title, css, body) => `<!doctype html><html lang="es-CO"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
-<style>*{box-sizing:border-box}body{margin:0;background:#E4D8BE;font:14px/1.4 'IBM Plex Sans',Arial,sans-serif;color:#141414}
-.bar{position:sticky;top:0;background:#141414;color:#EFE6D3;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between}
-.bar button{background:#D7261E;color:#EFE6D3;border:0;font:700 16px Oswald,sans-serif;text-transform:uppercase;padding:10px 18px;cursor:pointer}
+<style>*{box-sizing:border-box}body{margin:0;background:#EEE6D6;font:14px/1.4 'IBM Plex Sans',Arial,sans-serif;color:#141414}
+.bar{position:sticky;top:0;background:#141414;color:#F8F4EC;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+.bar button{background:#D7261E;color:#F8F4EC;border:0;font:700 16px Oswald,sans-serif;text-transform:uppercase;padding:10px 18px;cursor:pointer}
 h1,h2,.d{font-family:Oswald,'Arial Narrow',sans-serif;text-transform:uppercase;margin:0}
 @media print{.bar{display:none}body{background:#fff}}${css}</style></head>
 <body><div class="bar"><span>DIMENSIONA · ${esc(title)}</span><button onclick="window.print()">Imprimir / PDF</button></div>${body}</body></html>`;
@@ -60,8 +60,8 @@ function invoiceHtml(inv) {
   const nit = process.env.LEGAL_NIT || '[NIT]';
   const css = `.doc{max-width:820px;margin:16px auto;background:#fff;border:3px solid #141414;padding:28px}
 .top{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:6px solid #D7261E;padding-bottom:16px}
-.top img{height:44px}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:7px 8px;border-bottom:1px solid #D8CAA9;text-align:left}
-th{font:500 12px Oswald,sans-serif;letter-spacing:.08em;text-transform:uppercase;background:#141414;color:#EFE6D3}td.n,th.n{text-align:right}
+.top img{height:44px}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:7px 8px;border-bottom:1px solid #DDD2BC;text-align:left}
+th{font:500 12px Oswald,sans-serif;letter-spacing:.08em;text-transform:uppercase;background:#141414;color:#F8F4EC}td.n,th.n{text-align:right}
 .tot{margin-left:auto;width:280px;margin-top:14px}.tot div{display:flex;justify-content:space-between;padding:4px 0}
 .tot .g{font:700 22px Oswald,sans-serif;border-top:3px solid #141414;padding-top:8px}
 .st{display:inline-block;padding:3px 10px;font:700 14px Oswald,sans-serif;text-transform:uppercase;color:#fff;background:${inv.status === 'pagada' ? '#1F7A3A' : inv.status === 'anulada' ? '#5B5750' : '#D7261E'}}

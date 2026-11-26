@@ -8,7 +8,7 @@ import { colors } from '../theme';
 const PALETTE = [
   { top: '#E8493F', left: '#B11E17', right: '#D7261E' },
   { top: '#4A4744', left: '#141414', right: '#2A2826' },
-  { top: '#F6EEDD', left: '#CBBF9F', right: '#E4D8BE' },
+  { top: '#F6EEDD', left: '#CBBF9F', right: '#EEE6D6' },
 ];
 
 export function PackingView({ pkg, size = 260 }: { pkg: PackageInfo; size?: number }) {

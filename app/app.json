@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "scheme": "dimensiona",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#EFE6D3",
+    "backgroundColor": "#F8F4EC",
     "android": {
       "package": "co.dimensiona.logistica",
       "versionCode": 4,
@@ -46,7 +46,7 @@
       "bundler": "metro",
       "name": "DIMENSIONA",
       "themeColor": "#D7261E",
-      "backgroundColor": "#EFE6D3"
+      "backgroundColor": "#F8F4EC"
     },
     "experiments": {
       "baseUrl": "/app",

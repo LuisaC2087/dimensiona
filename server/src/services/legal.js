@@ -61,8 +61,8 @@ function page(title, body) {
 <title>${esc(title)} · DIMENSIONA</title><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
 <style>
-body{margin:0;background:#EFE6D3;color:#141414;font:16px/1.65 'IBM Plex Sans',system-ui,sans-serif}
-header{background:#141414;border-bottom:6px solid #D7261E;padding:14px 16px}header a{color:#EFE6D3;font:700 20px Oswald,sans-serif;text-decoration:none;letter-spacing:.04em}
+body{margin:0;background:#F8F4EC;color:#141414;font:16px/1.65 'IBM Plex Sans',system-ui,sans-serif}
+header{background:#141414;border-bottom:6px solid #D7261E;padding:14px 16px}header a{color:#F8F4EC;font:700 20px Oswald,sans-serif;text-decoration:none;letter-spacing:.04em}
 main{max-width:760px;margin:0 auto;padding:24px 16px 64px}
 h1,h2{font-family:Oswald,'Arial Narrow',sans-serif;text-transform:uppercase;line-height:1.05}
 h1{font-size:clamp(32px,8vw,48px);margin:8px 0 4px}h2{font-size:22px;margin-top:32px;border-left:10px solid #D7261E;padding-left:10px}

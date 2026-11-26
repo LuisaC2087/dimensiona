@@ -19,7 +19,7 @@ render.yaml  Blueprint de Render (web + PostgreSQL)
 
 ## Reglas
 - Medidas internas: AR en metros, API en centímetros y kilos. Toda medida es «estimación» y muestra confiabilidad.
-- Estilo constructivista: usar `app/src/theme.ts` y `components/ui.tsx` (papel #EFE6D3, tinta #141414, rojo #D7261E, Oswald). Móvil primero; en web ancho máx. 520.
+- Estilo constructivista: usar `app/src/theme.ts` y `components/ui.tsx` (papel #F8F4EC, tinta #141414, rojo #D7261E, Oswald). Móvil primero; en web ancho máx. 520.
 - Lo legal sale de `server/legal/*.md` (fuente única). Si cambian, subir `LEGAL_VERSION` en `server/src/services/legal.js`.
 - Expo SDK 57 / RN 0.86 fijados por ViroReact 3.1.1. Usar `npx expo install`. Nunca editar `android/` a mano. `.npmrc` usa `legacy-peer-deps`.
 - La IA (Gemini) solo con consentimiento (`lib/consent.ts`) y clave en el servidor (`GEMINI_API_KEY`).

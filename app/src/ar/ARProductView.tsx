@@ -21,10 +21,10 @@ ViroTelemetry.setEnabled(false); // privacidad: sin telemetría
 
 ViroMaterials.createMaterials({
   dmPoint: { diffuseColor: '#D7261E', lightingModel: 'Constant' },
-  dmLine: { diffuseColor: '#EFE6D3', lightingModel: 'Constant' },
+  dmLine: { diffuseColor: '#F8F4EC', lightingModel: 'Constant' },
   dmRed: { diffuseColor: '#D7261E', lightingModel: 'Constant' },
   dmDraft: { diffuseColor: '#FFFFFF', lightingModel: 'Constant' },
-  dmSurface: { diffuseColor: '#EFE6D3', lightingModel: 'Constant' },
+  dmSurface: { diffuseColor: '#F8F4EC', lightingModel: 'Constant' },
   dmFill: { diffuseColor: '#D7261E', lightingModel: 'Constant', blendMode: 'Alpha', cullMode: 'None' },
   dmPillRed: { diffuseColor: '#D7261E', lightingModel: 'Constant', cullMode: 'None' },
   dmPillInk: { diffuseColor: '#141414', lightingModel: 'Constant', cullMode: 'None' },
@@ -126,7 +126,7 @@ function Pill({ at, text, ink }: { at: [number, number, number]; text: string; i
     <ViroNode position={at} transformBehaviors={['billboard']}>
       <ViroQuad width={w} height={PILL_H} materials={[ink ? 'dmPillInk' : 'dmPillRed']} />
       <ViroText text={text} position={[0, 0, 0.002]} scale={[0.08, 0.08, 0.08]} width={w * 12.5} height={PILL_H * 12.5}
-        style={{ fontFamily: 'sans-serif-condensed', fontSize: 22, fontWeight: '700', color: '#EFE6D3', textAlign: 'center', textAlignVertical: 'center' }} />
+        style={{ fontFamily: 'sans-serif-condensed', fontSize: 22, fontWeight: '700', color: '#F8F4EC', textAlign: 'center', textAlignVertical: 'center' }} />
     </ViroNode>
   );
 }
