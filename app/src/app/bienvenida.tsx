@@ -20,7 +20,7 @@ const SLIDES: Record<Role, { icon: IconName; title: string; body: string }[]> = 
   ],
   mensajero: [
     { icon: 'hand-coin', title: 'Toma envíos', body: 'En «Disponibles» ves los envíos cerca de ti y cuánto ganas por cada uno.' },
-    { icon: 'ruler-square-compass', title: 'Verifica al recoger', body: 'Mide el paquete con AR antes de salir. Si no coincide con lo declarado, queda registrado.' },
+    { icon: 'ruler-square-compass', title: 'Verifica al recoger', body: 'Mide el paquete con AR (realidad aumentada) antes de salir. Si no coincide con lo declarado, queda registrado.' },
     { icon: 'camera', title: 'Prueba de entrega', body: 'Escribe quién recibió y toma una foto. Si no hay nadie, reporta la novedad.' },
     { icon: 'cash-multiple', title: 'Tus pagos', body: 'En «Ganancias» ves lo que llevas, lo que tienes por cobrar y cada pago recibido.' },
   ],

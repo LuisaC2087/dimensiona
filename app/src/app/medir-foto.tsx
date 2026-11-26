@@ -175,7 +175,7 @@ function MedirFoto() {
       {ai.obj && <Row wrap style={{ gap: 6 }}><Tag label={ai.obj.nombre} color={colors.red} /><Tag label={ai.obj.categoria} />{ai.obj.fragil && <Tag label="Frágil" color={colors.warn} />}</Row>}
       {ai.error && <Body muted>{ai.error}</Body>}
       <Button label="Usar estas medidas" variant="ink" onPress={confirm} disabled={!done} />
-      <Body muted style={{ fontSize: 13 }}>Precisión típica ±5 %: depende de que la referencia y el producto estén en el mismo plano. Para mayor precisión usa la medición AR en la app Android.</Body>
+      <Body muted style={{ fontSize: 13 }}>Precisión típica ±5 %: depende de que la referencia y el producto estén en el mismo plano. Para mayor precisión usa la medición con AR (realidad aumentada) en la app Android.</Body>
     </Screen>
   );
 }

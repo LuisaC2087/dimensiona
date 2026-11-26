@@ -41,7 +41,7 @@ export default function Registro() {
       <Body muted>
         {role === 'tienda'
           ? 'Mide tus productos con la cámara, empaca en la caja justa y gestiona tus envíos.'
-          : 'Toma envíos cerca de ti, verifica medidas con AR y entrega. Tu cuenta se activa cuando administración la apruebe.'}
+          : 'Toma envíos cerca de ti, verifica medidas con AR (realidad aumentada) y entrega. Tu cuenta se activa cuando administración la apruebe.'}
       </Body>
       {role === 'tienda' && <Field label="Nombre del emprendimiento" value={f.storeName} onChangeText={set('storeName')} placeholder="Ej: Luna Velas & Co." />}
       <Field label="Tu nombre" value={f.name} onChangeText={set('name')} autoComplete="name" />

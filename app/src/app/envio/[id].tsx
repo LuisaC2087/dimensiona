@@ -167,7 +167,7 @@ function EnvioDetalle() {
         <Button label={`Tomar envío · ganas ${money(s.courier_fee)}`} icon="ruler-square-compass" loading={busy} onPress={() => run(() => api.accept(s.id))} />
       )}
       {isMine && ['asignado', 'recogido'].includes(s.status) && (
-        <Button label="Verificar medidas con AR" variant="outline" icon="hand-coin"
+        <Button label="Verificar medidas con AR (realidad aumentada)" variant="outline" icon="hand-coin"
           onPress={() => router.push({ pathname: '/medir', params: { purpose: `verify:${s.id}` } })} />
       )}
       {(isMine || role === 'admin') && NEXT[s.status] && !action && (

@@ -15,7 +15,7 @@ import { useAuth } from '../../state/auth';
 import { colors, fonts, space } from '../../theme';
 
 const ACTIONS: { icon: IconName; title: string; sub: string; href: Href; primary?: boolean }[] = [
-  { icon: 'cube-scan', title: 'Medir', sub: 'producto con AR', href: '/producto/nuevo?medir=1', primary: true },
+  { icon: 'cube-scan', title: 'Medir', sub: 'con AR (realidad aumentada)', href: '/producto/nuevo?medir=1', primary: true },
   { icon: 'truck-fast', title: 'Enviar', sub: 'nuevo envío', href: '/nuevo-envio' },
   { icon: 'map-marker-radius', title: 'Rastrear', sub: 'una guía', href: '/rastreo' },
   { icon: 'receipt', title: 'Facturas', sub: 'y recaudos', href: '/tienda/facturas' },

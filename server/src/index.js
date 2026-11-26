@@ -99,7 +99,11 @@ if (fs.existsSync(config.webDist)) {
   app.get(/^\/app(\/.*)?$/, (_req, res) => res.status(503).send('La app web no está compilada (cd app && npx expo export -p web).'));
 }
 
-app.use(express.static(path.join(ROOT, 'public'), { maxAge: '10m' }));
+app.use(express.static(path.join(ROOT, 'public'), {
+  maxAge: '10m',
+  // Las páginas siempre se revalidan para que los cambios se vean al instante; imágenes y logos sí se guardan.
+  setHeaders: (res, file) => { if (file.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache'); },
+}));
 app.get(/^\/rastreo(\/.*)?$/, (_req, res) => res.sendFile(path.join(ROOT, 'public', 'index.html')));
 
 // Errores
