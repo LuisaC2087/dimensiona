@@ -67,16 +67,16 @@ visionRouter.post('/vision/identify', auth(), h(async (req, res) => {
     contents: [{ parts: [{ inline_data: { mime_type: mediaType, data: image } }, { text: PROMPT }] }],
     generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.2 },
   });
-  // Modelo configurado y, si Google lo retiró (404), los alias vigentes de Flash.
+  // Modelo configurado y, si Google lo retiró (404), está saturado (5xx) o no responde, los alias vigentes de Flash.
   const models = [...new Set([config.geminiModel, 'gemini-flash-latest', 'gemini-flash-lite-latest'])];
   let r;
   for (const model of models) {
     r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': config.geminiKey }, body,
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(20_000),
     }).catch((e) => ({ ok: false, status: 0, text: async () => e.message }));
-    if (r.ok || r.status !== 404) break;
-    console.error(`[vision] modelo ${model} no disponible (404)`);
+    if (r.ok || ![0, 404, 500, 503].includes(r.status)) break;
+    console.error(`[vision] modelo ${model} no disponible (${r.status || 'sin respuesta'}); probando el siguiente`);
   }
   if (r.status === 429) throw new HttpError(429, 'La IA está ocupada (límite gratuito). Intenta en unos segundos.');
   if (!r.ok) {
