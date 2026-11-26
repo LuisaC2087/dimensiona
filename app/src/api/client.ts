@@ -1,7 +1,7 @@
 /** Cliente de la API de DIMENSIONA (servicios en Render). */
 import { Platform } from 'react-native';
 import { getItem, setItem } from '../lib/storage';
-import type { BillingSummary, Box, CarrierInfo, Claim, Invoice, Me, Product, Quote, QuotePlan, Service, Settlement, Shipment, Stats, StoreProfile, TrackInfo, User, VisionObject, PackingResult } from './types';
+import type { AdminMessages, AppNotification, BillingSummary, Box, CarrierInfo, Claim, NotificationChannels, NotificationPrefs, Invoice, Me, Product, Quote, QuotePlan, Service, Settlement, Shipment, Stats, StoreProfile, TrackInfo, User, VisionObject, PackingResult } from './types';
 
 // En la web la app se sirve desde el mismo servidor: rutas relativas.
 const DEFAULT_URL = process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'web' ? '' : 'https://dimensiona-logistica.onrender.com');
@@ -64,12 +64,12 @@ const get = <T>(p: string) => request<T>('GET', p);
 const post = <T>(p: string, b?: unknown) => request<T>('POST', p, b ?? {});
 const put = <T>(p: string, b: unknown) => request<T>('PUT', p, b);
 const patch = <T>(p: string, b: unknown) => request<T>('PATCH', p, b);
-const del = <T>(p: string) => request<T>('DELETE', p);
+const del = <T>(p: string, b?: unknown) => request<T>('DELETE', p, b);
 
 export interface ItemInput { productId?: string; qty: number; name?: string; length?: number; width?: number; height?: number; weight?: number; fragile?: boolean }
 
 export const api = {
-  config: () => get<{ apkUrl: string | null; version: string; vision: boolean; mail: boolean; carriers: CarrierInfo[] }>('/config'),
+  config: () => get<{ apkUrl: string | null; version: string; vision: boolean; mail: boolean; carriers: CarrierInfo[]; notifications?: NotificationChannels }>('/config'),
   login: (email: string, password: string) => post<{ token: string; user: User }>('/auth/login', { email, password }),
   register: (b: Record<string, unknown>) => post<{ token?: string; user: User; pending?: boolean }>('/auth/register', b),
   me: () => get<Me>('/auth/me'),
@@ -138,6 +138,16 @@ export const api = {
   acceptTerms: (version: string) => post<{ ok: true }>('/auth/accept-terms', { version }),
   forgot: (email: string) => post<{ ok: true; mail: boolean; message: string }>('/auth/forgot', { email }),
   reset: (token: string, password: string) => post<{ ok: true }>('/auth/reset', { token, password }),
+  // v1.2: avisos
+  notifications: () => get<{ items: AppNotification[]; unread: number }>('/notifications'),
+  unread: () => get<{ unread: number }>('/notifications/unread'),
+  markRead: (ids?: string[]) => post<{ ok: true }>('/notifications/read', ids ? { ids } : {}),
+  notificationPrefs: () => get<NotificationPrefs>('/notifications/prefs'),
+  setNotificationPrefs: (b: { push?: boolean; customers?: boolean }) => put<{ ok: true }>('/notifications/prefs', b),
+  registerPushToken: (token: string, platform: string) => post<{ ok: true }>('/notifications/push-token', { token, platform }),
+  removePushToken: (token: string) => del<{ ok: true }>('/notifications/push-token', { token }),
+  optOut: (code: string) => post<{ ok: true }>(`/track/${encodeURIComponent(code)}/opt-out`),
+  adminMessages: () => get<AdminMessages>('/admin/messages'),
 };
 
 export type { Quote };

@@ -9,6 +9,7 @@ import { bad, h, HttpError, auth, notFound } from '../auth.js';
 import { config } from '../config.js';
 import { many, one } from '../db.js';
 import { audit } from './audit.js';
+import { notifyAdmins, notifyUsers } from './notifications.js';
 
 const TYPES = ['peticion', 'queja', 'reclamo', 'sugerencia'];
 const clean = (v, n) => String(v ?? '').trim().slice(0, n);
@@ -46,6 +47,7 @@ claimsRouter.post('/claims', h(async (req, res) => {
   const row = await one(`INSERT INTO claims (number, type, shipment_id, user_id, name, contact, message, due_at)
     VALUES ($1,$2,$3,$4,$5,$6,$7, now() + interval '21 days') RETURNING number, type, status, created_at, due_at`,
   [number, type, shipmentId, user?.id ?? null, name, contact, message]);
+  await notifyAdmins({ kind: 'pqr', title: `Nueva PQR ${number}`, body: `${name}: ${message.slice(0, 100)}`, link: '/admin/soporte' });
   res.status(201).json(row);
 }));
 
@@ -66,8 +68,9 @@ claimsRouter.post('/admin/claims/:id/respond', auth('admin'), h(async (req, res)
   const response = clean(req.body?.response, 3000);
   if (response.length < 5) throw bad('Escribe la respuesta');
   const status = req.body?.close === false ? 'en_tramite' : 'cerrada';
-  const r = await one('UPDATE claims SET response=$1, status=$2, responded_at=now() WHERE id=$3 RETURNING id', [response, status, req.params.id]);
+  const r = await one('UPDATE claims SET response=$1, status=$2, responded_at=now() WHERE id=$3 RETURNING id, number, user_id', [response, status, req.params.id]);
   if (!r) throw notFound();
+  await notifyUsers([r.user_id], { kind: 'pqr.respuesta', title: `Respondimos tu PQR ${r.number}`, body: response.slice(0, 160), link: '/pqr' });
   await audit(req.user.id, 'claim.respond', req.params.id, { status });
   res.json({ ok: true });
 }));

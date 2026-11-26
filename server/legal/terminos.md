@@ -53,6 +53,7 @@ Cuando eliges un servicio de Servientrega o Coordinadora, la Plataforma genera l
 - Declarar con veracidad el contenido, valor, medidas y peso de cada envío.
 - Embalar adecuadamente los productos, en especial los frágiles.
 - **No enviar** artículos prohibidos o restringidos: armas, municiones, explosivos, sustancias inflamables, tóxicas o corrosivas, estupefacientes, dinero en efectivo o títulos valores, animales vivos, restos humanos, productos falsificados o cualquier objeto cuyo transporte esté prohibido por la ley colombiana.
+- Contar con la autorización de sus clientes para compartir su nombre, celular, dirección y, si lo incluye, su correo, con el fin de entregar el pedido y avisarle su estado (Ley 1581 de 2012).
 - Cumplir la normativa de protección al consumidor (Ley 1480 de 2011) frente a sus propios clientes, incluidos el derecho de retracto y las garantías de sus productos.
 
 ## 6. Obligaciones del Mensajero
@@ -92,7 +93,7 @@ La Plataforma se ofrece «tal como está». Procuramos su funcionamiento continu
 
 ## 13. Comunicaciones electrónicas
 
-Aceptas que las comunicaciones, la aceptación de estos Términos y los registros de la Plataforma tengan validez como mensajes de datos conforme a la Ley 527 de 1999.
+La Plataforma te avisa dentro de la app (y en el teléfono, si lo permites) sobre tus envíos, facturas, pagos y PQR; puedes ajustar las notificaciones del teléfono en Avisos. Aceptas que las comunicaciones, la aceptación de estos Términos y los registros de la Plataforma tengan validez como mensajes de datos conforme a la Ley 527 de 1999.
 
 ## 14. Cambios
 

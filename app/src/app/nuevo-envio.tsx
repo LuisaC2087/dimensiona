@@ -28,7 +28,7 @@ function NuevoEnvio() {
   const [step, setStep] = useState<Step>(1);
   const [products, setProducts] = useState<Product[] | null>(null);
   const [qty, setQty] = useState<Record<string, number>>({});
-  const [to, setTo] = useState({ recipientName: '', recipientPhone: '', address: '', city: '', notes: '' });
+  const [to, setTo] = useState({ recipientName: '', recipientPhone: '', recipientEmail: '', address: '', city: '', notes: '' });
   const [cod, setCod] = useState(false);
   const [codAmount, setCodAmount] = useState('');
   const [packing, setPacking] = useState<'catalogo' | 'medida'>('catalogo');
@@ -82,7 +82,7 @@ function NuevoEnvio() {
         <Button label="Enviar rastreo por WhatsApp" icon="whatsapp" onPress={() => Linking.openURL(`https://wa.me/${waNumber(created.recipient_phone)}?text=${encodeURIComponent(msg)}`)} />
         <Button label="Compartir" variant="outline" onPress={() => Share.share({ message: msg })} />
         <Button label="Ver guía" variant="ink" onPress={() => router.replace(`/envio/${created.id}`)} />
-        <Button label="Otro envío" variant="ghost" onPress={() => { setQty({}); setTo({ recipientName: '', recipientPhone: '', address: '', city: '', notes: '' }); setPlan(null); setCreated(null); setStep(1); }} />
+        <Button label="Otro envío" variant="ghost" onPress={() => { setQty({}); setTo({ recipientName: '', recipientPhone: '', recipientEmail: '', address: '', city: '', notes: '' }); setPlan(null); setCreated(null); setStep(1); }} />
       </Screen>
     );
   }
@@ -125,6 +125,7 @@ function NuevoEnvio() {
           <SectionTitle icon="account">¿Para quién?</SectionTitle>
           <Field label="Nombre del cliente" value={to.recipientName} onChangeText={(v) => setTo((t) => ({ ...t, recipientName: v }))} autoComplete="name" />
           <Field label="Celular / WhatsApp" value={to.recipientPhone} onChangeText={(v) => setTo((t) => ({ ...t, recipientPhone: v }))} keyboardType="phone-pad" />
+          <Field label="Correo (opcional)" value={to.recipientEmail} onChangeText={(v) => setTo((t) => ({ ...t, recipientEmail: v }))} keyboardType="email-address" autoCapitalize="none" autoComplete="email" hint="Le avisamos el estado de su pedido por WhatsApp y, si lo escribes, por correo" />
           <Field label="Dirección" value={to.address} onChangeText={(v) => setTo((t) => ({ ...t, address: v }))} placeholder="Cl 72 #10-34 Apto 501" />
           <Field label="Ciudad" value={to.city} onChangeText={(v) => setTo((t) => ({ ...t, city: v }))} placeholder="Medellín" hint={`Origen: ${store?.city ?? '—'}`} />
           <Field label="Indicaciones (opcional)" value={to.notes} onChangeText={(v) => setTo((t) => ({ ...t, notes: v }))} placeholder="Portería, horario, referencia…" multiline />

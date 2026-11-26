@@ -18,6 +18,10 @@ export default function Mas() {
           sub={c.mode === 'real' ? 'Conectada con credenciales del contrato' : 'Modo simulado: agrega las credenciales del contrato en Render para conectarla'}
           right={<Tag label={c.mode === 'real' ? 'Conectada' : 'Simulada'} color={c.mode === 'real' ? colors.ok : colors.warn} />} />
       ))}
+      <SectionTitle icon="bell">Avisos</SectionTitle>
+      <ListItem icon="message-text-fast" title="Avisos a clientes" sub={data?.notifications?.whatsapp === 'real' ? 'WhatsApp conectado · registro de mensajes' : 'WhatsApp en modo manual · registro de mensajes'}
+        onPress={() => router.push('/admin/mensajes')}
+        right={<Tag label={data?.notifications?.whatsapp === 'real' ? 'Conectado' : 'Manual'} color={data?.notifications?.whatsapp === 'real' ? colors.ok : colors.warn} />} />
       <SectionTitle icon="lifebuoy">Soporte y control</SectionTitle>
       <ListItem icon="message-alert" title="PQR" sub="Peticiones, quejas y reclamos (plazo 15 días hábiles)" onPress={() => router.push('/admin/soporte')} />
       <ListItem icon="history" title="Bitácora" sub="Pagos, facturación y cambios de usuarios" onPress={() => router.push('/admin/bitacora')} />

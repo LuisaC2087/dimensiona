@@ -20,6 +20,9 @@ import { colors, fonts, space } from '../../theme';
 import { Icon } from '../../components/Icon';
 import { openDocument } from '../../lib/print';
 
+const MSG_STATUS: Record<string, string> = { creado: 'Pedido listo', en_ruta: 'En camino', entregado: 'Entregado', novedad: 'Novedad', devuelto: 'Devuelto' };
+const MSG_STATE = { enviado: 'Enviado', simulado: 'Por enviar', pendiente: 'Enviando', fallido: 'Falló' } as const;
+
 /** Próximos días hábiles (lunes a sábado) para agendar recogida. */
 function nextDays(n = 6) {
   const out: { iso: string; label: string }[] = [];
@@ -263,6 +266,31 @@ function EnvioDetalle() {
         <KeyValue k="Total" v={money(s.price)} strong />
         {role !== 'tienda' && <KeyValue k="Pago al mensajero" v={money(s.courier_fee)} />}
       </Card>
+
+      {s.messages && (
+        <>
+          <SectionTitle icon="message-text-fast">Avisos al cliente</SectionTitle>
+          {s.messages.length === 0 ? (
+            <Body muted>Aún no hay avisos para {s.recipient_name.split(' ')[0]}. Se envían cuando el pedido sale, va en camino, se entrega o tiene novedad{role === 'tienda' ? ' (puedes apagarlos en Avisos → Preferencias)' : ''}.</Body>
+          ) : s.messages.map((m) => (
+            <Card key={m.id} accent={m.state === 'enviado' ? colors.ok : m.state === 'fallido' ? colors.red : colors.warn}>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <Row style={{ gap: space.sm }}>
+                  <Icon name={m.channel === 'whatsapp' ? 'whatsapp' : 'email-outline'} size={20} />
+                  <Label>{MSG_STATUS[m.status_trigger] ?? m.status_trigger}</Label>
+                </Row>
+                <Tag label={MSG_STATE[m.state]} color={m.state === 'enviado' ? colors.ok : m.state === 'fallido' ? colors.red : colors.warn} />
+              </Row>
+              <Body>{m.body}</Body>
+              <Body muted style={{ fontSize: 12 }}>{dateTime(m.created_at)}{m.error ? ` · ${m.error}` : ''}</Body>
+              {m.channel === 'whatsapp' && m.state !== 'enviado' && role === 'tienda' && (
+                <Button small variant="outline" icon="whatsapp" label="Enviar por WhatsApp"
+                  onPress={() => Linking.openURL(`https://wa.me/${m.to_addr}?text=${encodeURIComponent(m.body)}`)} />
+              )}
+            </Card>
+          ))}
+        </>
+      )}
 
       <SectionTitle>Historial</SectionTitle>
       <View style={{ borderLeftWidth: 6, borderColor: colors.ink, marginLeft: 8, gap: space.md }}>

@@ -29,7 +29,7 @@ services:
       - key: APK_URL
         sync: false # enlace al APK (EAS o GitHub Releases)
       - key: APP_VERSION
-        value: 1.1.0
+        value: 1.2.0
       - key: GEMINI_API_KEY
         sync: false # opcional: reconocimiento con IA (gratis en aistudio.google.com)
       - key: LEGAL_COMPANY
@@ -75,6 +75,15 @@ services:
         sync: false
       - key: COORDINADORA_ACCOUNT
         sync: false
+      # Avisos al cliente por WhatsApp (API de WhatsApp Cloud de Meta). Sin credenciales: modo simulado
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_ID
+        sync: false
+      - key: WHATSAPP_TEMPLATE
+        value: dimensiona_estado
+      - key: WHATSAPP_LANG
+        value: es
 
 databases:
   - name: dimensiona-db

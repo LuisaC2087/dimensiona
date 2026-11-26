@@ -17,7 +17,7 @@ const sha = (s) => createHash('sha256').update(s).digest('hex');
 const env = process.env;
 export const mailEnabled = () => !!(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS);
 
-async function sendMail(to, subject, text) {
+export async function sendMail(to, subject, text) {
   const { default: nodemailer } = await import('nodemailer');
   const t = nodemailer.createTransport({
     host: env.SMTP_HOST, port: Number(env.SMTP_PORT ?? 587), secure: Number(env.SMTP_PORT) === 465,

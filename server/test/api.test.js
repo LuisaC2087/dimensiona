@@ -78,7 +78,7 @@ describe('público', () => {
   test('legal por API', async () => {
     const r = await call('GET', '/api/legal/terminos');
     assert.equal(r.status, 200);
-    assert.equal(r.body.version, '1.1');
+    assert.equal(r.body.version, '1.2');
     assert.equal((await call('GET', '/api/legal/otro')).status, 404);
   });
   test('ruta API desconocida → 404 JSON', async () => {
@@ -107,7 +107,7 @@ describe('identidad', () => {
     assert.ok(ok.body.token);
     const exp = await call('GET', '/api/auth/me/export', { token: ok.body.token });
     assert.equal(exp.status, 200);
-    assert.equal(exp.body.user.terms_version, '1.1');
+    assert.equal(exp.body.user.terms_version, '1.2');
     assert.ok(exp.body.user.terms_accepted_at);
     assert.equal(exp.body.store.name, 'Ana Shop');
     const dup = await call('POST', '/api/auth/register', { body: { ...base, acceptTerms: true } });

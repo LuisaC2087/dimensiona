@@ -2,7 +2,7 @@
   "expo": {
     "name": "DIMENSIONA",
     "slug": "dimensiona-logistica",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "dimensiona",
@@ -10,14 +10,15 @@
     "backgroundColor": "#EFE6D3",
     "android": {
       "package": "co.dimensiona.logistica",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#141414"
       },
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
@@ -81,6 +82,14 @@
           "microphonePermission": false,
           "cameraPermission": "DIMENSIONA usa la cámara para medir tus productos y registrar la prueba de entrega.",
           "photosPermission": "DIMENSIONA usa tus fotos solo para medir productos."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#D7261E",
+          "defaultChannel": "avisos"
         }
       ]
     ],

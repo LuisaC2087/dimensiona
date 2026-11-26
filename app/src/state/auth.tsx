@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, loadClientState, setToken, setUnauthorizedHandler } from '../api/client';
+import { unregisterPush } from '../lib/push';
 import type { Role, StoreProfile, User } from '../api/types';
 import { View } from 'react-native';
 import { Loading } from '../components/ui';
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [terms, setTerms] = useState<{ accepted: string | null; current: string } | null>(null);
 
   const logout = useCallback(async () => {
+    await unregisterPush();
     await setToken(null);
     setUser(null);
     setStore(null);

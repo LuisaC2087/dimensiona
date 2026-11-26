@@ -7,6 +7,7 @@ import { chargeableKg } from '../lib/pricing.js';
 import { buildPlan } from './logistics.js';
 import { loadServices } from './catalog.js';
 import { carrierInfo, createGuide, listCarriers, schedulePickup, track as carrierTrack } from '../carriers/index.js';
+import { customerMessagesFor, notifyAvailable, notifyUsers, shipmentChanged } from './notifications.js';
 
 export const STATUS = ['creado', 'asignado', 'recogido', 'en_ruta', 'entregado', 'novedad', 'devuelto', 'cancelado'];
 export const STATUS_LABEL = {
@@ -41,6 +42,8 @@ export async function createShipmentFor(store, b, userId) {
   const address = clean(b.address), city = clean(b.city, 60);
   if (!recipientName || !recipientPhone || !address || !city) throw bad('Completa nombre, teléfono, dirección y ciudad del destinatario');
   if (!/^[0-9+ ()-]{7,20}$/.test(recipientPhone)) throw bad('Teléfono del destinatario inválido');
+  const recipientEmail = clean(b.recipientEmail, 120).toLowerCase() || null;
+  if (recipientEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipientEmail)) throw bad('Correo del destinatario inválido');
   const plan = await buildPlan({
     storeId: store.id, originCity: store.city, items: b.items, destCity: city,
     declaredValue: Number(b.declaredValue) || 0, codAmount: Number(b.codAmount) || 0, packing: b.packing,
@@ -57,12 +60,12 @@ export async function createShipmentFor(store, b, userId) {
   }
   const row = await one(
     `INSERT INTO shipments (code, store_id, service_id, recipient_name, recipient_phone, address, city, zone, notes, items, packages, quote,
-       baseline_total, declared_value, cod_amount, price, courier_fee, carrier)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
+       baseline_total, declared_value, cod_amount, price, courier_fee, carrier, recipient_email)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
     [code, store.id, quote.serviceId, recipientName, recipientPhone, address, city, plan.zone, clean(b.notes, 300) || null,
       JSON.stringify(plan.items), JSON.stringify(plan.packages), JSON.stringify(quote),
       quote.baselineTotal ?? null,
-      plan.declaredValue, Number(b.codAmount) || 0, quote.total, courierFee, carrier]);
+      plan.declaredValue, Number(b.codAmount) || 0, quote.total, courierFee, carrier, recipientEmail]);
   await query('INSERT INTO shipment_events (shipment_id, status, note, by_user) VALUES ($1,$2,$3,$4)', [row.id, 'creado', 'Guía creada', userId]);
   if (carrier !== 'propia') {
     const g = await createGuide(carrier, {
@@ -73,8 +76,11 @@ export async function createShipmentFor(store, b, userId) {
     const upd = await one('UPDATE shipments SET carrier_guide=$1 WHERE id=$2 RETURNING *', [g.guide, row.id]);
     await query('INSERT INTO shipment_events (shipment_id, status, note, by_user) VALUES ($1,$2,$3,$4)',
       [row.id, 'creado', `Guía ${info.name} N.° ${g.guide}${g.mode === 'simulado' ? ' (modo simulado)' : ''}. Agenda la recogida.`, userId]);
+    await shipmentChanged(row.id, 'creado', { actorId: userId });
     return shipmentOut(upd);
   }
+  await shipmentChanged(row.id, 'creado', { actorId: userId });
+  await notifyAvailable(row, store);
   return shipmentOut(row);
 }
 
@@ -115,6 +121,7 @@ export async function syncCarrier(s) {
   }
   const last = [...fresh].reverse().find((e) => STATUS.includes(e.status));
   await query('UPDATE shipments SET carrier_synced=$1, status=coalesce($2, status), updated_at=now() WHERE id=$3', [events.length, last?.status ?? null, s.id]);
+  if (last && last.status !== s.status) await shipmentChanged(s.id, last.status, { note: last.note });
   return true;
 }
 
@@ -142,7 +149,8 @@ shipmentsRouter.get('/shipments/:id', auth(), h(async (req, res) => {
   if (await syncCarrier(s)) s = await getShipmentFor(req.user, req.params.id);
   const events = await many(`SELECT e.id, e.status, e.note, e.photo, e.receiver_name, e.created_at, u.name AS by_name
     FROM shipment_events e LEFT JOIN users u ON u.id = e.by_user WHERE e.shipment_id = $1 ORDER BY e.created_at`, [s.id]);
-  res.json({ ...shipmentOut(s), carrier_info: carrierInfo(s.carrier), events: events.map((e) => ({ ...e, status_label: STATUS_LABEL[e.status] })) });
+  const messages = req.user.role === 'mensajero' ? undefined : await customerMessagesFor(s.id);
+  res.json({ ...shipmentOut(s), carrier_info: carrierInfo(s.carrier), events: events.map((e) => ({ ...e, status_label: STATUS_LABEL[e.status] })), messages });
 }));
 
 shipmentsRouter.post('/shipments/:id/cancel', auth('tienda', 'admin'), h(async (req, res) => {
@@ -150,6 +158,7 @@ shipmentsRouter.post('/shipments/:id/cancel', auth('tienda', 'admin'), h(async (
   if (!['creado', 'asignado'].includes(s.status)) throw bad('Solo puedes cancelar envíos que aún no se han recogido');
   await query("UPDATE shipments SET status='cancelado', updated_at=now() WHERE id=$1", [s.id]);
   await addEvent(s.id, 'cancelado', req.user.id, { note: req.body?.note });
+  await shipmentChanged(s.id, 'cancelado', { actorId: req.user.id });
   res.json({ ok: true });
 }));
 
@@ -166,6 +175,7 @@ shipmentsRouter.post('/shipments/:id/accept', auth('mensajero'), h(async (req, r
     WHERE id=$2 AND status='creado' AND courier_id IS NULL AND carrier='propia' RETURNING id`, [req.user.id, req.params.id]);
   if (!r) throw bad('Otro mensajero ya tomó este envío');
   await addEvent(r.id, 'asignado', req.user.id, { note: `Asignado a ${req.user.name}` });
+  await shipmentChanged(r.id, 'asignado', { actorId: req.user.id });
   res.json({ ok: true });
 }));
 
@@ -181,6 +191,7 @@ shipmentsRouter.post('/shipments/:id/status', auth('mensajero', 'admin'), h(asyn
   }
   await query('UPDATE shipments SET status=$1, updated_at=now() WHERE id=$2', [next, s.id]);
   await addEvent(s.id, next, req.user.id, { note: req.body?.note, photo: req.body?.photo, receiverName: req.body?.receiverName });
+  await shipmentChanged(s.id, next, { actorId: req.user.id, note: req.body?.note, receiver: req.body?.receiverName });
   res.json({ ok: true });
 }));
 
@@ -207,6 +218,11 @@ shipmentsRouter.post('/shipments/:id/verify', auth('mensajero', 'admin'), h(asyn
   await addEvent(s.id, s.status, req.user.id, {
     note: verified.matches ? `Medidas verificadas con AR: ${dims.join(' × ')} cm ✓` : `Ajuste: el paquete mide ${dims.join(' × ')} cm (${measuredKg} kg cobrables, se declararon ${declaredKg})`,
   });
+  if (!verified.matches) {
+    const owner = await one('SELECT owner_id FROM stores WHERE id=$1', [s.store_id]);
+    await notifyUsers([owner?.owner_id], { kind: 'envio.ajuste', title: `Ajuste de medidas · ${s.code}`,
+      body: `El mensajero midió ${dims.join(' × ')} cm (${measuredKg} kg cobrables; se declararon ${declaredKg}).`, link: `/envio/${s.id}` });
+  }
   res.json(verified);
 }));
 
@@ -216,6 +232,8 @@ shipmentsRouter.post('/shipments/:id/assign', auth('admin'), h(async (req, res) 
   const s = await one("UPDATE shipments SET courier_id=$1, status=CASE WHEN status='creado' THEN 'asignado' ELSE status END, updated_at=now() WHERE id=$2 RETURNING id", [courier.id, req.params.id]);
   if (!s) throw notFound();
   await addEvent(s.id, 'asignado', req.user.id, { note: `Asignado por administración a ${courier.name}` });
+  await shipmentChanged(s.id, 'asignado', { actorId: req.user.id });
+  await notifyUsers([courier.id], { kind: 'asignacion', title: 'Te asignaron un envío', body: 'Administración te asignó un envío. Revisa la dirección de recogida.', link: `/envio/${s.id}` });
   res.json({ ok: true });
 }));
 
@@ -243,7 +261,7 @@ shipmentsRouter.get('/carriers', auth(), h(async (_req, res) => res.json(listCar
 
 // Rastreo público (cliente final): sin datos sensibles.
 shipmentsRouter.get('/track/:code', h(async (req, res) => {
-  const q = `SELECT s.id, s.code, s.status, s.city, s.zone, s.created_at, s.updated_at, s.quote, s.recipient_name, s.carrier, s.carrier_guide, s.pickup, s.carrier_synced,
+  const q = `SELECT s.id, s.code, s.status, s.city, s.zone, s.created_at, s.updated_at, s.quote, s.recipient_name, s.carrier, s.carrier_guide, s.pickup, s.carrier_synced, s.recipient_opt_out,
       st.name AS store_name, u.name AS courier_name
     FROM shipments s JOIN stores st ON st.id = s.store_id LEFT JOIN users u ON u.id = s.courier_id WHERE upper(s.code) = upper($1) OR s.carrier_guide = $1`;
   let s = await one(q, [String(req.params.code).trim()]);
@@ -257,6 +275,7 @@ shipmentsRouter.get('/track/:code', h(async (req, res) => {
     recipient: first(s.recipient_name), courier: s.courier_name ? first(s.courier_name) : null,
     service: quote?.serviceName, etaDays: quote?.etaDays,
     carrier: s.carrier !== 'propia' ? { name: carrierInfo(s.carrier).name, guide: s.carrier_guide } : null, created_at: s.created_at, updated_at: s.updated_at,
+    notifications: !s.recipient_opt_out,
     events: events.map((e) => ({ status: e.status, status_label: STATUS_LABEL[e.status], note: e.note, receiver: e.receiver_name ? first(e.receiver_name) : null, at: e.created_at })),
   });
 }));
@@ -308,4 +327,11 @@ shipmentsRouter.get('/stats', auth(), h(async (req, res) => {
   const byStatus = await many('SELECT status, count(*)::int AS n FROM shipments GROUP BY status');
   const byZone = await many("SELECT zone, count(*)::int AS n FROM shipments WHERE status <> 'cancelado' GROUP BY zone");
   res.json({ ...r, ...users, ...billing, byStatus, byZone });
+}));
+
+// El destinatario deja de recibir avisos de este envío (enlace del mensaje / página de rastreo).
+shipmentsRouter.post('/track/:code/opt-out', h(async (req, res) => {
+  const r = await one('UPDATE shipments SET recipient_opt_out=true WHERE upper(code)=upper($1) RETURNING id', [String(req.params.code).trim()]);
+  if (!r) throw notFound('No encontramos esa guía');
+  res.json({ ok: true });
 }));

@@ -45,6 +45,10 @@ export default function Rastreo() {
               ))}
             </View>
           )}
+          {data.notifications && !['entregado', 'cancelado', 'devuelto'].includes(data.status) && (
+            <Button small variant="ghost" icon="bell-off-outline" label="No recibir más avisos de este envío"
+              onPress={() => api.optOut(data.code).then(reload).catch(() => {})} />
+          )}
           <Label>Historial</Label>
           <View style={{ borderLeftWidth: 6, borderColor: colors.ink, marginLeft: 8, gap: space.md }}>
             {[...data.events].reverse().map((e, i) => (

@@ -294,7 +294,16 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space
           '<ul class="timeline">' + ev.map(function (e, i) {
             return '<li class="' + (i === 0 ? 'now' : '') + '"><strong>' + esc(e.status_label) + '</strong>' + (e.note ? ' — ' + esc(e.note) : '') +
               (e.receiver ? ' (recibió ' + esc(e.receiver) + ')' : '') + '<time>' + fmt(e.at) + '</time></li>';
-          }).join('') + '</ul>';
+          }).join('') + '</ul>' +
+          (t.notifications && ['entregado', 'cancelado', 'devuelto'].indexOf(t.status) < 0
+            ? '<p style="margin-top:14px;font-size:14px">¿No quieres más avisos por WhatsApp o correo de este envío? <button type="button" id="opt-out" style="border:2px solid var(--ink);background:var(--paper);font:600 13px var(--display);text-transform:uppercase;padding:4px 10px;cursor:pointer">No recibir avisos</button></p>'
+            : '');
+        var b = document.getElementById('opt-out');
+        if (b) b.addEventListener('click', function () {
+          fetch('/api/track/' + encodeURIComponent(t.code) + '/opt-out', { method: 'POST' }).then(function (r) {
+            b.parentNode.textContent = r.ok ? 'Listo: no te enviaremos más avisos de este envío.' : 'No pudimos procesarlo. Intenta de nuevo.';
+          });
+        });
       }).catch(function () { out.innerHTML = '<p class="err">No hay conexión con el servidor.</p>'; });
   }
   document.getElementById('track-form').addEventListener('submit', function (e) {

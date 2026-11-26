@@ -82,6 +82,9 @@ export function AccountScreen({ onBack }: { onBack?: () => void } = {}) {
       <Field label="Contraseña nueva" value={pwd.newPassword} onChangeText={(v) => setPwd((p) => ({ ...p, newPassword: v }))} secureTextEntry hint="Mínimo 8 caracteres" />
       <Button label="Cambiar contraseña" variant="outline" onPress={changePwd} disabled={!pwd.password || !pwd.newPassword} />
 
+      <SectionTitle icon="bell">Avisos</SectionTitle>
+      <ListItem icon="bell-cog" title="Avisos y notificaciones" sub={user.role === 'tienda' ? 'Bandeja, notificaciones del teléfono y avisos a tus clientes' : 'Bandeja y notificaciones del teléfono'} onPress={() => router.push('/avisos')} />
+
       <SectionTitle icon="lifebuoy">Ayuda</SectionTitle>
       <ListItem icon="school" title="Ver la guía de bienvenida" sub="Cómo funciona DIMENSIONA para tu rol" onPress={async () => { await resetWelcome(); router.push('/bienvenida'); }} />
       <ListItem icon="message-alert-outline" title="PQR" sub="Peticiones, quejas, reclamos y sugerencias" onPress={() => router.push('/pqr')} />

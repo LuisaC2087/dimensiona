@@ -17,6 +17,7 @@ export default function AdminLayout() {
         <Tabs.Screen name="soporte" options={{ title: 'PQR', href: null }} />
         <Tabs.Screen name="bitacora" options={{ title: 'Bitácora', href: null }} />
         <Tabs.Screen name="cuenta" options={{ title: 'Cuenta', href: null }} />
+        <Tabs.Screen name="mensajes" options={{ title: 'Avisos', href: null }} />
       </Tabs>
     </RoleGate>
   );

@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { auth, bad, h, notFound } from '../auth.js';
 import { many, one, query } from '../db.js';
 import { audit } from './audit.js';
+import { notifyUsers } from './notifications.js';
 
 export const IVA_PCT = Number(process.env.BILLING_IVA_PCT ?? 19);
 const PREFIX = process.env.BILLING_PREFIX ?? 'DM';
@@ -54,6 +55,9 @@ export async function runBilling(period, userId) {
       VALUES ($1,$2,$3,$4,$5,$6,$7, now() + interval '${DUE_DAYS} days') RETURNING *`, [number, storeId, period, JSON.stringify(items), subtotal, iva, total]);
     await query('UPDATE shipments SET invoice_id=$1 WHERE id = ANY($2::uuid[])', [inv.id, list.map((r) => r.id)]);
     created.push(invoiceOut(inv));
+    const owner = await one('SELECT owner_id FROM stores WHERE id=$1', [storeId]);
+    await notifyUsers([owner?.owner_id], { kind: 'factura', title: `Nueva cuenta de cobro ${number}`,
+      body: `Periodo ${period} · ${list.length} envío${list.length === 1 ? '' : 's'} · ${Math.round(total).toLocaleString('es-CO')}`, link: '/tienda/facturas' });
   }
   await audit(userId, 'billing.run', period, { invoices: created.length });
   return created;
@@ -142,8 +146,13 @@ billingRouter.get('/admin/settlements', auth('admin'), h(async (_req, res) => {
   res.json(rows.map(invoiceOut));
 }));
 billingRouter.post('/admin/settlements/:id/pay', auth('admin'), h(async (req, res) => {
-  const r = await one("UPDATE settlements SET status='pagada', paid_at=now(), payment_ref=$1 WHERE id=$2 AND status='pendiente' RETURNING id", [String(req.body?.ref ?? '').slice(0, 80) || null, req.params.id]);
+  const r = await one(`UPDATE settlements st SET status='pagada', paid_at=now(), payment_ref=$1 WHERE id=$2 AND status='pendiente'
+    RETURNING id, kind, amount, courier_id, (SELECT owner_id FROM stores WHERE id = st.store_id) AS owner_id`, [String(req.body?.ref ?? '').slice(0, 80) || null, req.params.id]);
   if (!r) throw bad('La liquidación no está pendiente');
+  const amount = `${Math.round(Number(r.amount)).toLocaleString('es-CO')}`;
+  await notifyUsers([r.kind === 'tienda' ? r.owner_id : r.courier_id], r.kind === 'tienda'
+    ? { kind: 'liquidacion', title: 'Te transferimos tus recaudos', body: `${amount} de pagos contra entrega.`, link: '/tienda/facturas' }
+    : { kind: 'liquidacion', title: 'Pago recibido', body: `${amount} por tus entregas.`, link: '/mensajero/ganancias' });
   await audit(req.user.id, 'settlement.pay', req.params.id, { ref: req.body?.ref });
   res.json({ ok: true });
 }));

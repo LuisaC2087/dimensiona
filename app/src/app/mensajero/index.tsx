@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { api } from '../../api/client';
 import type { Shipment } from '../../api/types';
 import { ShipmentCard } from '../../components/ShipmentCard';
+import { Bell } from '../../components/Bell';
 import { Button, Empty, ErrorBox, Header, Loading, Row, Screen, SectionTitle, Stat } from '../../components/ui';
 import { money } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
@@ -21,7 +22,7 @@ export default function MiRuta() {
   const deliveries = data?.ships.filter((s) => s.status !== 'asignado') ?? [];
 
   return (
-    <Screen header={<Header title="Mi ruta" kicker={`${user?.name.split(' ')[0] ?? ''} · ${user?.vehicle ?? ''}`} />} onRefresh={reload} refreshing={refreshing}>
+    <Screen header={<Header title="Mi ruta" kicker={`${user?.name.split(' ')[0] ?? ''} · ${user?.vehicle ?? ''}`} right={<Bell />} />} onRefresh={reload} refreshing={refreshing}>
       <ErrorBox message={error} onRetry={reload} />
       <Row wrap style={{ gap: space.sm }}>
         <Stat label="Entregas hoy" value={String(st.entregadosHoy ?? 0)} accent />

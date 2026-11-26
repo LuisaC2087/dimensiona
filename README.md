@@ -11,6 +11,18 @@
 | **Administrador** | Panel de métricas, aprobación de mensajeros, asignación de envíos, catálogo de cajas y tarifas por zona. |
 | **Cliente final** | Rastrea su envío sin cuenta en `/rastreo/<código>`. |
 
+## Novedades v1.2 · Avisos
+
+- **Bandeja de avisos** en la app (campana con contador) para cada rol: cambios de estado de los envíos, novedades, ajustes de medidas, envíos disponibles cerca (mensajeros), facturas, pagos, PQR y mensajeros por aprobar (administración).
+- **Notificaciones push** en el APK (Expo). Al tocar una se abre la pantalla relacionada.
+- **Avisos al cliente final** por WhatsApp (y correo si la tienda lo escribe) cuando el pedido sale, va en camino, se entrega o tiene novedad. Sin credenciales de Meta quedan en **modo manual**: la tienda los envía con un toque desde el envío.
+- El destinatario puede **dejar de recibir avisos** desde el enlace de rastreo; la tienda puede apagarlos para todos sus clientes.
+- Administración ve el estado de los canales y el registro de mensajes. Legal v1.2 (uso del celular del destinatario para avisos).
+
+**Para activar WhatsApp automático:** crea una app en Meta for Developers con WhatsApp Cloud API, registra el número del negocio, crea y aprueba la plantilla `dimensiona_estado` (categoría Utilidad, idioma `es`): `Hola {{1}}, tu pedido de {{2}} {{3}}. Guía {{4}}. Síguelo aquí: {{5}}` y pon `WHATSAPP_TOKEN` (token permanente de usuario del sistema) y `WHATSAPP_PHONE_ID` en Render.
+
+**Para activar push en Android:** crea un proyecto en Firebase, descarga `google-services.json` a `app/`, añade `"googleServicesFile": "./google-services.json"` en `android` de `app.json`, sube la clave de cuenta de servicio FCM v1 con `npx eas-cli credentials` y vuelve a compilar el APK. Mientras tanto los avisos llegan a la bandeja de la app.
+
 ## Novedades v1.1
 
 - **Marca**: logo (caja isométrica + cota de medida), íconos en toda la app y manual de marca en `/marca`.

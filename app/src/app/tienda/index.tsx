@@ -3,8 +3,8 @@ import { Pressable, Text, View } from 'react-native';
 import { api } from '../../api/client';
 import type { Shipment } from '../../api/types';
 import { Icon, type IconName } from '../../components/Icon';
-import { LogoMark } from '../../components/Logo';
 import { ShipmentCard } from '../../components/ShipmentCard';
+import { Bell } from '../../components/Bell';
 import { Button, Card, Empty, ErrorBox, Header, Loading, Row, Screen, SectionTitle, Stat } from '../../components/ui';
 import { money } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
@@ -63,7 +63,7 @@ export default function TiendaInicio() {
   const st = (data?.stats ?? {}) as Record<string, number>;
 
   return (
-    <Screen header={<Header title={store?.name ?? 'Mi tienda'} kicker={`Hola, ${user?.name.split(' ')[0] ?? ''}`} right={<LogoMark size={40} negative />} />} onRefresh={reload} refreshing={refreshing}>
+    <Screen header={<Header title={store?.name ?? 'Mi tienda'} kicker={`Hola, ${user?.name.split(' ')[0] ?? ''}`} right={<Bell />} />} onRefresh={reload} refreshing={refreshing}>
       <Row wrap style={{ gap: space.sm }}>
         {ACTIONS.map((a) => <ActionTile key={a.title} a={a} />)}
       </Row>

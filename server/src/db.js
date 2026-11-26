@@ -208,6 +208,41 @@ CREATE TABLE IF NOT EXISTS audit_log (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at timestamptz;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_ip text;
+-- v1.2: avisos (en la app, push, WhatsApp y correo)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_push boolean NOT NULL DEFAULT true;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS notify_customers boolean NOT NULL DEFAULT true;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS recipient_email text;
+ALTER TABLE shipments ADD COLUMN IF NOT EXISTS recipient_opt_out boolean NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind text NOT NULL,
+  title text NOT NULL,
+  body text,
+  link text,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications(user_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS push_tokens (
+  token text PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  platform text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS customer_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  shipment_id uuid NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+  channel text NOT NULL CHECK (channel IN ('whatsapp','email')),
+  to_addr text NOT NULL,
+  status_trigger text NOT NULL,
+  body text NOT NULL,
+  state text NOT NULL DEFAULT 'pendiente',
+  error text,
+  provider_id text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS customer_messages_ship_idx ON customer_messages(shipment_id);
 `;
 
 async function migrate() {

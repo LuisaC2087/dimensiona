@@ -47,11 +47,12 @@ export interface Shipment {
   verified: { dims: number[]; chargeableKg: number; declaredChargeableKg: number | null; matches: boolean; at: string; by: string } | null;
   carrier: CarrierId; carrier_guide: string | null; pickup: { id: string; date: string; window: string; mode: string } | null; carrier_info?: CarrierInfo; invoice_id?: string | null;
   created_at: string; updated_at: string; events?: ShipmentEvent[];
+  recipient_email?: string | null; messages?: CustomerMessage[];
 }
 
 export interface TrackInfo {
   code: string; status: ShipmentStatus; status_label: string; city: string; store: string; recipient: string; courier: string | null;
-  service?: string; etaDays?: number; created_at: string; updated_at: string; carrier: { name: string; guide: string } | null;
+  service?: string; etaDays?: number; created_at: string; updated_at: string; carrier: { name: string; guide: string } | null; notifications?: boolean;
   events: { status: ShipmentStatus; status_label: string; note: string | null; receiver: string | null; at: string }[];
 }
 
@@ -82,4 +83,15 @@ export interface BillingSummary {
 export interface Claim {
   id?: string; number: string; type: 'peticion' | 'queja' | 'reclamo' | 'sugerencia'; status: 'abierta' | 'en_tramite' | 'cerrada';
   message?: string; name?: string; contact?: string; response: string | null; created_at: string; due_at: string; responded_at: string | null; shipment_code?: string | null;
+}
+
+// v1.2: avisos
+export interface AppNotification { id: string; kind: string; title: string; body: string | null; link: string | null; read_at: string | null; created_at: string }
+export interface CustomerMessage { id: string; channel: 'whatsapp' | 'email'; to_addr: string; status_trigger: ShipmentStatus; body: string; state: 'pendiente' | 'enviado' | 'simulado' | 'fallido'; error: string | null; created_at: string }
+export interface NotificationChannels { whatsapp: 'real' | 'simulado'; email: boolean; push: boolean; template: string }
+export interface NotificationPrefs { push: boolean; customers: boolean | null; channels: NotificationChannels }
+export interface AdminMessages {
+  channels: NotificationChannels;
+  totals: { total: number; enviados: number; simulados: number; fallidos: number; dispositivos: number };
+  items: (Omit<CustomerMessage, 'body'> & { code: string; shipment_id: string })[];
 }

@@ -6,6 +6,7 @@ import { many, one, query } from '../db.js';
 import { loadBoxes, loadServices } from './catalog.js';
 import { LEGAL_VERSION } from './legal.js';
 import { audit } from './audit.js';
+import { notifyAdmins } from './notifications.js';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const publicUser = (u) => ({ id: u.id, email: u.email, name: u.name, role: u.role, phone: u.phone, city: u.city, vehicle: u.vehicle, active: u.active });
@@ -45,7 +46,10 @@ usersRouter.post('/auth/register', h(async (req, res) => {
     await query('INSERT INTO stores (owner_id, name, city, address, channel, instagram, whatsapp) VALUES ($1,$2,$3,$4,$5,$6,$7)',
       [user.id, String(b.storeName).trim().slice(0, 80), city, b.address ?? null, b.channel ?? null, b.instagram ?? null, b.phone ?? null]);
   }
-  if (!user.active) return res.status(201).json({ pending: true, user: publicUser(user) });
+  if (!user.active) {
+    await notifyAdmins({ kind: 'mensajero.pendiente', title: 'Mensajero por aprobar', body: `${user.name} · ${user.city ?? ''}`, link: '/admin/usuarios' });
+    return res.status(201).json({ pending: true, user: publicUser(user) });
+  }
   res.status(201).json({ token: signToken(user), user: publicUser(user) });
 }));
 
@@ -91,8 +95,9 @@ usersRouter.get('/auth/me/export', auth(), h(async (req, res) => {
   const shipments = store
     ? await many('SELECT code, status, recipient_name, recipient_phone, address, city, price, created_at FROM shipments WHERE store_id=$1', [store.id])
     : await many('SELECT code, status, city, courier_fee, created_at FROM shipments WHERE courier_id=$1', [req.user.id]);
+  const notifications = await many('SELECT kind, title, body, read_at, created_at FROM notifications WHERE user_id=$1 ORDER BY created_at DESC', [req.user.id]);
   res.setHeader('Content-Disposition', 'attachment; filename="mis-datos-dimensiona.json"');
-  res.json({ exportedAt: new Date().toISOString(), user: u, store, products, shipments });
+  res.json({ exportedAt: new Date().toISOString(), user: u, store, products, shipments, notifications });
 }));
 
 usersRouter.delete('/auth/me', auth('tienda', 'mensajero'), h(async (req, res) => {

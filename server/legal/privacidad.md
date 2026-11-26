@@ -30,11 +30,15 @@ No vendemos tus datos ni los usamos para publicidad de terceros.
 
 ## 3. Datos de destinatarios
 
-La Tienda declara que obtuvo de sus clientes la autorización para compartir sus datos con DIMENSIONA con el único fin de realizar la entrega. La página pública de rastreo muestra solo el **primer nombre** del destinatario, la ciudad y el estado del envío.
+La Tienda declara que obtuvo de sus clientes la autorización para compartir sus datos con DIMENSIONA con el único fin de realizar la entrega **y de informarle el estado de su pedido**. La página pública de rastreo muestra solo el **primer nombre** del destinatario, la ciudad y el estado del envío.
+
+### 3A. Avisos al destinatario
+
+Con el celular del destinatario enviamos, a nombre de la Tienda, avisos por WhatsApp sobre su pedido en cuatro momentos: envío listo, en camino, entregado y novedad o devolución. Si la Tienda escribe un correo del destinatario, el mismo aviso puede llegar por correo. Los mensajes no contienen publicidad. El destinatario puede dejar de recibirlos en cualquier momento desde el enlace de rastreo («No recibir más avisos»), y la Tienda puede desactivarlos para todos sus clientes. Guardamos un registro de cada aviso (fecha, canal y estado de entrega) como soporte.
 
 ## 4. Transferencia y transmisión
 
-Para operar, los datos se alojan con proveedores de infraestructura en la nube (Render, con servidores que pueden estar fuera de Colombia). Si usas «Identificar con IA», la imagen se envía a Google (Gemini) para su análisis y no se guarda en DIMENSIONA. Estos proveedores actúan como encargados del tratamiento con medidas de seguridad adecuadas. Al aceptar esta Política autorizas estas transferencias internacionales.
+Para operar, los datos se alojan con proveedores de infraestructura en la nube (Render, con servidores que pueden estar fuera de Colombia). Si usas «Identificar con IA», la imagen se envía a Google (Gemini) para su análisis y no se guarda en DIMENSIONA. Los avisos por WhatsApp se envían por la plataforma oficial de Meta (WhatsApp Business) y las notificaciones del teléfono por el servicio de Expo y Google (Firebase). Estos proveedores actúan como encargados del tratamiento con medidas de seguridad adecuadas. Al aceptar esta Política autorizas estas transferencias internacionales.
 
 Los datos de cada envío se comparten solo con quien lo necesita: la Tienda, el Mensajero asignado y el Administrador.
 
@@ -59,7 +63,7 @@ Aplicamos medidas técnicas y organizativas: conexión cifrada (HTTPS), contrase
 
 ## 7A. Almacenamiento en tu dispositivo
 
-La app guarda en tu dispositivo solo lo estrictamente necesario para funcionar: el token de tu sesión (en el almacenamiento seguro del teléfono o en el navegador), tu preferencia de servidor, las ayudas que cerraste y tu autorización para la IA. No usamos cookies de publicidad ni de rastreo.
+La app guarda en tu dispositivo solo lo estrictamente necesario para funcionar: el token de tu sesión (en el almacenamiento seguro del teléfono o en el navegador), tu preferencia de servidor, las ayudas que cerraste y tu autorización para la IA. Si permites las notificaciones, guardamos un identificador del teléfono para enviarlas; lo borramos al cerrar sesión o cuando el teléfono deja de ser válido, y puedes apagarlas desde Avisos. No usamos cookies de publicidad ni de rastreo.
 
 ## 8. Conservación
 

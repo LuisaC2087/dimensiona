@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Text, View } from 'react-native';
 import { api } from '../../api/client';
+import { Bell } from '../../components/Bell';
 import { Button, Card, ErrorBox, Header, Label, Loading, Row, Screen, SectionTitle, Stat, STATUS_COLOR } from '../../components/ui';
 import { money, ZONE_LABEL } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
@@ -30,7 +31,7 @@ export default function Panel() {
   const { data, error, loading, refreshing, reload } = useLoad(api.stats);
   const st = (data ?? {}) as Record<string, any>;
   return (
-    <Screen header={<Header title="Panel" kicker="Administración" icon="view-dashboard" />} onRefresh={reload} refreshing={refreshing}>
+    <Screen header={<Header title="Panel" kicker="Administración" icon="view-dashboard" right={<Bell />} />} onRefresh={reload} refreshing={refreshing}>
       <ErrorBox message={error} onRetry={reload} />
       {loading && !data ? <Loading /> : (
         <>

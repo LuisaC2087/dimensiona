@@ -27,6 +27,8 @@ import { claimsRouter } from './services/claims.js';
 import { passwordsRouter } from './services/passwords.js';
 import { listCarriers } from './carriers/index.js';
 import { mailEnabled } from './services/passwords.js';
+import { notificationsRouter, pruneNotifications } from './services/notifications.js';
+import { channelStatus } from './notify/channels.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -78,9 +80,9 @@ app.get('/marca', (_req, res) => res.sendFile(path.join(ROOT, 'public', 'marca.h
 const api = express.Router();
 api.get('/config', (_req, res) => res.json({
   apkUrl: config.apkUrl ? '/descargar' : null, version: config.appVersion, vision: !!config.geminiKey,
-  mail: mailEnabled(), carriers: listCarriers(),
+  mail: mailEnabled(), carriers: listCarriers(), notifications: channelStatus(),
 }));
-api.use(usersRouter, passwordsRouter, catalogRouter, logisticsRouter, shipmentsRouter, visionRouter, billingRouter, printApiRouter, claimsRouter, auditRouter);
+api.use(usersRouter, passwordsRouter, catalogRouter, logisticsRouter, shipmentsRouter, visionRouter, billingRouter, printApiRouter, claimsRouter, auditRouter, notificationsRouter);
 api.use((_req, _res, next) => next(new HttpError(404, 'Ruta no encontrada')));
 app.use('/api', api);
 
@@ -109,6 +111,7 @@ app.use((err, _req, res, _next) => {
 
 const kind = await initDb();
 await seed();
+await pruneNotifications();
 const server = app.listen(config.port, () => console.log(`DIMENSIONA escuchando en :${config.port} (base: ${kind})`));
 
 // Cierre ordenado (Render envía SIGTERM al redesplegar)
