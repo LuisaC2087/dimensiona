@@ -217,13 +217,6 @@ function EnvioDetalle() {
           <Button label="Compartir" icon="share-variant" variant="outline" onPress={() => Share.share({ message: waMsg })} />
         </Row>
       )}
-      {role === 'tienda' && user?.email.endsWith('@demo.app') && s.carrier === 'propia' && s.status === 'creado' && !s.courier_id && (
-        <Card accent={colors.red}>
-          <Label>Modo demostración</Label>
-          <Body muted>Mira el envío completo en vivo y lo que ve cada rol: tienda, mensajero, administración y cliente. Dura menos de un minuto y usa los avisos reales.</Body>
-          <Button icon="play-circle" label="Simular recorrido" loading={busy} onPress={() => run(async () => { await api.simulateDemo(s.id); router.push(`/recorrido/${s.id}`); })} />
-        </Card>
-      )}
       {role === 'tienda' && (
         <Button small variant="ghost" icon="message-alert-outline" label="Reportar un problema (PQR)" onPress={() => router.push({ pathname: '/pqr', params: { code: s.code } })} />
       )}

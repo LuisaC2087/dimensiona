@@ -6,6 +6,7 @@ import { resetWelcome } from '../lib/onboarding';
 import { router } from 'expo-router';
 import { api, getBaseUrl } from '../api/client';
 import { useAuth } from '../state/auth';
+import { useTour } from '../tour/TourProvider';
 import { colors } from '../theme';
 import { Body, Button, Card, ErrorBox, Field, Header, KeyValue, ListItem, Screen, SectionTitle, Segmented, Tag } from './ui';
 
@@ -18,6 +19,7 @@ function confirm(title: string, msg: string, ok: () => void) {
 
 export function AccountScreen({ onBack }: { onBack?: () => void } = {}) {
   const { user, store, logout, refresh } = useAuth();
+  const tour = useTour();
   const [f, setF] = useState({
     name: user?.name ?? '', phone: user?.phone ?? '', city: user?.city ?? '', vehicle: user?.vehicle ?? 'Moto',
     storeName: store?.name ?? '', storeCity: store?.city ?? '', address: store?.address ?? '', instagram: store?.instagram ?? '', whatsapp: store?.whatsapp ?? '',
@@ -86,6 +88,7 @@ export function AccountScreen({ onBack }: { onBack?: () => void } = {}) {
       <ListItem icon="bell-cog" title="Avisos y notificaciones" sub={user.role === 'tienda' ? 'Bandeja, notificaciones del teléfono y avisos a tus clientes' : 'Bandeja y notificaciones del teléfono'} onPress={() => router.push('/avisos')} />
 
       <SectionTitle icon="lifebuoy">Ayuda</SectionTitle>
+      <ListItem icon="play-circle" title="Recorrido guiado" sub="La app se maneja sola y te explica cada pantalla" onPress={() => void tour.start(user.role)} />
       <ListItem icon="school" title="Ver la guía de bienvenida" sub="Cómo funciona DIMENSIONA para tu rol" onPress={async () => { await resetWelcome(); router.push('/bienvenida'); }} />
       <ListItem icon="message-alert-outline" title="PQR" sub="Peticiones, quejas, reclamos y sugerencias" onPress={() => router.push('/pqr')} />
 

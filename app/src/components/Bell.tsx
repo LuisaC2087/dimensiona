@@ -5,11 +5,13 @@ import { useNotifications } from '../state/notifications';
 import { colors, fonts } from '../theme';
 import { Icon } from './Icon';
 import { Pop, Shake } from './motion';
+import { TourTarget } from '../tour/TourTarget';
 
 export function Bell() {
   const { unread } = useNotifications();
   const label = unread ? `Avisos, ${unread} sin leer` : 'Avisos';
   return (
+    <TourTarget id="bell">
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={() => router.push('/avisos')} hitSlop={8}
       style={{ width: 44, height: 44, borderWidth: 2, borderColor: colors.paper, alignItems: 'center', justifyContent: 'center' }}>
       <Shake trigger={unread}><Icon name={unread ? 'bell-ring' : 'bell-outline'} size={24} color={colors.paper} /></Shake>
@@ -19,5 +21,6 @@ export function Bell() {
         </View></Pop>
       )}
     </Pressable>
+    </TourTarget>
   );
 }

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../theme';
 import { Icon, type IconName } from './Icon';
 import { Pop } from './motion';
+import { TourTarget } from '../tour/TourTarget';
 
 export function TabBar({ state, descriptors, navigation, icons }: any & { icons: Record<string, IconName> }) {
   const insets = useSafeAreaInsets();
@@ -16,7 +17,8 @@ export function TabBar({ state, descriptors, navigation, icons }: any & { icons:
         const focused = state.index === i;
         const label = options.title ?? route.name;
         return (
-          <Pressable key={route.key} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={label}
+          <TourTarget key={route.key} id={`tab.${route.name}`} style={{ flex: 1 }}>
+          <Pressable accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={label}
             onPress={() => {
               const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
               if (!focused && !e.defaultPrevented) navigation.navigate(route.name);
@@ -25,6 +27,7 @@ export function TabBar({ state, descriptors, navigation, icons }: any & { icons:
             <Pop trigger={focused ? 'on' : 'off'}><Icon name={(icons as Record<string, IconName>)[route.name] ?? 'circle-outline'} size={24} color={focused ? colors.paper : colors.paper3} /></Pop>
             <Text numberOfLines={1} style={{ color: colors.paper, fontFamily: fonts.displayMedium, fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', opacity: focused ? 1 : 0.8 }}>{label}</Text>
           </Pressable>
+          </TourTarget>
         );
       })}
     </View>

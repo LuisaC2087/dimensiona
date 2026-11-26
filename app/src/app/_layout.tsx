@@ -5,6 +5,7 @@ import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../state/auth';
 import { NotificationsProvider } from '../state/notifications';
+import { TourProvider } from '../tour/TourProvider';
 import { Loading, WebFrame } from '../components/ui';
 import { colors } from '../theme';
 
@@ -15,10 +16,12 @@ export default function RootLayout() {
   ) : (
     <AuthProvider>
       <NotificationsProvider>
+      <TourProvider>
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.paper }, animation: 'slide_from_right' }}>
         <Stack.Screen name="medir" options={{ animation: 'fade' }} />
       </Stack>
+      </TourProvider>
       </NotificationsProvider>
     </AuthProvider>
   );

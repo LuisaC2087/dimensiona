@@ -8,6 +8,7 @@ import { homeFor, useAuth } from '../state/auth';
 import { colors, fonts, space } from '../theme';
 import { LogoMark } from '../components/Logo';
 import { FadeIn, Float, Pop } from '../components/motion';
+import { useTour } from '../tour/TourProvider';
 
 const DEMOS = [
   { label: 'Tienda', email: 'tienda@demo.app' },
@@ -16,6 +17,7 @@ const DEMOS = [
 
 export default function Login() {
   const { user, login } = useAuth();
+  const tour = useTour();
   const { next } = useLocalSearchParams<{ next?: string }>();
   const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
   const [email, setEmail] = useState('');
@@ -61,6 +63,10 @@ export default function Login() {
                 <Button key={d.email} small variant="ink" label={d.label} style={{ flex: 1 }} onPress={() => { setEmail(d.email); setPassword('demo1234'); void submit(d.email, 'demo1234'); }} />
               ))}
             </Row>
+            <Button icon="play-circle" label="Ver demostración guiada" loading={busy} onPress={async () => {
+              setBusy(true); setError(null);
+              try { await login('tienda@demo.app', 'demo1234'); await tour.start('tienda'); } catch (err: any) { setError(err.message); } finally { setBusy(false); }
+            }} />
           </View>
 
           <Row style={{ justifyContent: 'center' }}>

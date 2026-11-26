@@ -13,7 +13,7 @@
 
 ## Novedades v1.3 · Demo y movimiento
 
-- **Recorrido en vivo** (cuentas demo): «Ver la app en acción» en el inicio de la tienda, o «Simular recorrido» en un envío. Un envío real avanza solo en menos de un minuto (asignación, verificación de medidas con AR, recogida, ruta, novedad, reintento y entrega) y la pantalla muestra qué ve cada rol: tienda, mensajero, administración y cliente final, con los avisos reales.
+- **Recorrido guiado**: la app se maneja sola por las pantallas de cada rol. Una mano señala y «presiona» cada opción y una tarjeta explica qué se ve, con Anterior, Siguiente y pausa. Se abre con «Ver demostración guiada» en el inicio de sesión, «Ver la app en acción» en la tienda demo o Cuenta › Ayuda › Recorrido guiado. Con las cuentas demo continúa de tienda a mensajero.
 - **Dimi**, la mascota: una caja kawaii que camina en las pantallas de carga.
 - **Movimiento** en toda la app y en la página: entradas escalonadas, banda roja que barre los encabezados, cifras que cuentan, botones con resorte, campana que se sacude con avisos nuevos. Respeta «Reducir movimiento» del sistema.
 - Logo simplificado: la caja isométrica sin la flecha de medida.

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../../api/client';
 import { ShipmentCard } from '../../components/ShipmentCard';
+import { TourTarget } from '../../tour/TourTarget';
 import { Body, Button, Empty, ErrorBox, Header, Loading, Screen } from '../../components/ui';
 import { money } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
@@ -19,9 +20,11 @@ export default function Disponibles() {
     <Screen header={<Header title="Disponibles" kicker="Toma envíos cerca de ti" />} onRefresh={reload} refreshing={refreshing}>
       <Body muted>Primero los de tu ciudad. Al tomar un envío te comprometes a recogerlo hoy.</Body>
       <ErrorBox message={error ?? err} onRetry={reload} />
-      {loading && !data ? <Loading /> : data?.length ? data.map((s) => (
-        <ShipmentCard key={s.id} s={s} show="courier"
-          extra={<Button small label={`Tomar · ${money(s.courier_fee)}`} loading={busy === s.id} onPress={() => take(s.id)} />} />
+      {loading && !data ? <Loading /> : data?.length ? data.map((s, i) => (
+        <TourTarget key={s.id} id={i === 0 ? 'list.first' : `list.${s.id}`}>
+          <ShipmentCard s={s} show="courier"
+            extra={<Button small label={`Tomar · ${money(s.courier_fee)}`} loading={busy === s.id} onPress={() => take(s.id)} />} />
+        </TourTarget>
       )) : <Empty title="No hay envíos por tomar" body="Desliza hacia abajo para actualizar." />}
     </Screen>
   );

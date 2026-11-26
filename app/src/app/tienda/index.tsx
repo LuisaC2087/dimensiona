@@ -7,6 +7,8 @@ import { ShipmentCard } from '../../components/ShipmentCard';
 import { Bell } from '../../components/Bell';
 import { Body, Button, Card, Empty, ErrorBox, Header, Loading, Row, Screen, SectionTitle, Stat, Title } from '../../components/ui';
 import { FadeIn, Pulse } from '../../components/motion';
+import { TourTarget } from '../../tour/TourTarget';
+import { useTour } from '../../tour/TourProvider';
 import { money } from '../../lib/format';
 import { useLoad } from '../../lib/useLoad';
 import { useAuth } from '../../state/auth';
@@ -56,6 +58,7 @@ function FirstSteps({ products, shipments }: { products: number; shipments: numb
 }
 
 export default function TiendaInicio() {
+  const tour = useTour();
   const { store, user } = useAuth();
   const { data, error, loading, refreshing, reload } = useLoad(async () => {
     const [stats, ships] = await Promise.all([api.stats(), api.shipments({ status: 'creado,asignado,recogido,en_ruta,novedad' })]);
@@ -66,16 +69,16 @@ export default function TiendaInicio() {
   return (
     <Screen header={<Header title={store?.name ?? 'Mi tienda'} kicker={`Hola, ${user?.name.split(' ')[0] ?? ''}`} right={<Bell />} />} onRefresh={reload} refreshing={refreshing}>
       <Row wrap style={{ gap: space.sm }}>
-        {ACTIONS.map((a, i) => <FadeIn key={a.title} delay={80 + i * 70} style={{ width: '48%', flexGrow: 1 }}><ActionTile a={a} /></FadeIn>)}
+        {ACTIONS.map((a, i) => <FadeIn key={a.title} delay={80 + i * 70} style={{ width: '48%', flexGrow: 1 }}>{i === 0 ? <TourTarget id="home.medir"><ActionTile a={a} /></TourTarget> : <ActionTile a={a} />}</FadeIn>)}
       </Row>
 
       {user?.email.endsWith('@demo.app') && (
-        <Card accent={colors.red} onPress={() => router.push('/recorrido/nuevo')}>
+        <Card accent={colors.red} onPress={() => void tour.start('tienda')}>
           <Row>
             <Pulse><View style={{ width: 48, height: 48, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' }}><Icon name="play" size={30} color={colors.paper} /></View></Pulse>
             <View style={{ flex: 1 }}>
               <Title size={20}>Ver la app en acción</Title>
-              <Body muted>Un envío completo en menos de un minuto, desde los ojos de cada rol.</Body>
+              <Body muted>Recorrido guiado: la app se maneja sola y te explica cada pantalla.</Body>
             </View>
           </Row>
         </Card>
