@@ -7,7 +7,7 @@ import { Body, Button, ErrorBox, Field, Label, Row, Title } from '../components/
 import { homeFor, useAuth } from '../state/auth';
 import { colors, fonts, space } from '../theme';
 import { LogoMark } from '../components/Logo';
-import { FadeIn, Float, Pop } from '../components/motion';
+import { FadeIn, Pop } from '../components/motion';
 import { useTour } from '../tour/TourProvider';
 
 const DEMOS = [
@@ -41,7 +41,7 @@ export default function Login() {
         <View style={s.hero}>
           <Pop style={s.circle}><View /></Pop>
           <FadeIn style={s.diag} distance={60}><View /></FadeIn>
-          <Float style={{ marginBottom: space.sm, alignSelf: 'flex-start' }}><Pop><View style={{ backgroundColor: colors.ink, padding: 8 }}><LogoMark size={56} negative /></View></Pop></Float>
+          <View style={{ marginBottom: space.sm, alignSelf: 'flex-start', backgroundColor: colors.ink, padding: 8 }}><LogoMark size={56} negative /></View>
           <FadeIn delay={120}><Text style={s.kicker}>SMART LOGISTICS</Text></FadeIn>
           <FadeIn delay={220}><Text style={s.logo}>DIMEN{'\n'}SIONA</Text></FadeIn>
           <FadeIn delay={340}><Text style={s.tagline}>Mide. Empaca. Envía.</Text></FadeIn>
