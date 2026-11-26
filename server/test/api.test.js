@@ -66,7 +66,7 @@ describe('público', () => {
   });
   test('página de descarga y legales en HTML', async () => {
     const home = await (await fetch(`${BASE}/`)).text();
-    assert.match(home, /Descargar APK/);
+    assert.match(home, /Descárgala gratis/);
     assert.match(home, /\/terminos/);
     const t = await (await fetch(`${BASE}/terminos`)).text();
     assert.match(t, /Términos y Condiciones/);
