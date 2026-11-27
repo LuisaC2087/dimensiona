@@ -137,17 +137,20 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
   );
 }
 
-export function Field({ label, hint, error, style, ...props }: TextInputProps & { label: string; hint?: string; error?: string | null }) {
+export function Field({ label, hint, error: errorProp, required, style, ...props }: TextInputProps & { label: string; hint?: string; error?: string | null; required?: boolean }) {
   const [focus, setFocus] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const missing = !!required && touched && !String(props.value ?? '').trim();
+  const error = errorProp || (missing ? 'Este campo es obligatorio' : null);
   return (
     <View style={[{ gap: 6 }, style as StyleProp<ViewStyle>]}>
-      <Label color={colors.ink}>{label}</Label>
+      <Label color={colors.ink}>{required ? `${label} *` : label}</Label>
       <TextInput
         placeholderTextColor="#8C8576"
-        accessibilityLabel={label}
+        accessibilityLabel={required ? `${label} (obligatorio)` : label}
         {...props}
         onFocus={(e) => { setFocus(true); props.onFocus?.(e); }}
-        onBlur={(e) => { setFocus(false); props.onBlur?.(e); }}
+        onBlur={(e) => { setFocus(false); setTouched(true); props.onBlur?.(e); }}
         style={{
           minHeight: 50, borderWidth: 3, borderColor: error ? colors.red : colors.ink, backgroundColor: focus ? colors.white : '#FFFDF8',
           paddingHorizontal: space.md, fontSize: 17, color: colors.ink, ...(props.multiline ? { minHeight: 90, paddingTop: 12, textAlignVertical: 'top' } : {}),

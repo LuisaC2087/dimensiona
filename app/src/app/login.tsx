@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getBaseUrl, getDefaultUrl, setBaseUrl } from '../api/client';
-import { Body, Button, ErrorBox, Field, Label, Row, Title } from '../components/ui';
+import { Button, ErrorBox, Field, Label, Row, Title } from '../components/ui';
 import { homeFor, useAuth } from '../state/auth';
 import { colors, fonts, space } from '../theme';
 import { LogoMark } from '../components/Logo';
-import { FadeIn, Pop } from '../components/motion';
+import { FadeIn, Pop, Spin } from '../components/motion';
 import { useTour } from '../tour/TourProvider';
 
 const DEMOS = [
@@ -24,8 +23,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showServer, setShowServer] = useState(false);
-  const [server, setServer] = useState(getBaseUrl());
 
   if (user) return <Redirect href={(safeNext ?? homeFor(user.role)) as any} />;
 
@@ -39,9 +36,9 @@ export default function Login() {
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         {/* Composición constructivista: círculo, diagonal y bloque de título */}
         <View style={s.hero}>
-          <Pop style={s.circle}><View /></Pop>
+          <Pop style={s.circleWrap}><Spin style={s.circle}><View /></Spin></Pop>
           <FadeIn style={s.diag} distance={60}><View /></FadeIn>
-          <View style={{ marginBottom: space.sm, alignSelf: 'flex-start', backgroundColor: colors.ink, padding: 8 }}><LogoMark size={56} negative /></View>
+          <View style={{ marginBottom: space.sm, alignSelf: 'flex-start' }}><LogoMark size={64} /></View>
           <FadeIn delay={120}><Text style={s.kicker}>SMART LOGISTICS</Text></FadeIn>
           <FadeIn delay={220}><Text style={s.logo}>DIMEN{'\n'}SIONA</Text></FadeIn>
           <FadeIn delay={340}><Text style={s.tagline}>Mide. Empaca. Envía.</Text></FadeIn>
@@ -49,8 +46,8 @@ export default function Login() {
 
         <View style={s.panel}>
           <Title size={26}>Entrar</Title>
-          <Field label="Correo" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" placeholder="tu@correo.com" />
-          <Field label="Contraseña" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" placeholder="••••••••" onSubmitEditing={() => submit()} />
+          <Field required label="Correo" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" placeholder="tu@correo.com" />
+          <Field required label="Contraseña" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" placeholder="••••••••" onSubmitEditing={() => submit()} />
           <ErrorBox message={error} />
           <Button label="Entrar" icon="login" onPress={() => submit()} loading={busy} disabled={!email || !password} />
           <Pressable accessibilityRole="link" onPress={() => router.push('/olvido')} style={{ alignSelf: 'flex-end' }}><Text style={{ color: colors.redDark, fontWeight: '700', textDecorationLine: 'underline' }}>¿Olvidaste tu contraseña?</Text></Pressable>
@@ -78,19 +75,6 @@ export default function Login() {
             <Pressable accessibilityRole="link" onPress={() => router.push('/legal/privacidad')}><Text style={{ color: colors.grey, fontSize: 13, textDecorationLine: 'underline' }}>Tratamiento de datos</Text></Pressable>
           </Row>
 
-          <Pressable onPress={() => setShowServer((v) => !v)} accessibilityRole="button">
-            <Text style={{ color: colors.grey, fontSize: 13, textAlign: 'center', textDecorationLine: 'underline' }}>Servidor: {getBaseUrl() || 'este sitio'}</Text>
-          </Pressable>
-          {showServer && (
-            <View style={{ gap: space.sm }}>
-              <Field label="URL del servidor" value={server} onChangeText={setServer} autoCapitalize="none" placeholder={getDefaultUrl() || 'https://…'} />
-              <Row>
-                <Button small label="Guardar" style={{ flex: 1 }} onPress={async () => { await setBaseUrl(server || null); setShowServer(false); }} />
-                <Button small variant="outline" label="Restablecer" style={{ flex: 1 }} onPress={async () => { await setBaseUrl(null); setServer(getBaseUrl()); }} />
-              </Row>
-              <Body muted style={{ fontSize: 13 }}>Úsalo solo si tu empresa tiene su propio servidor DIMENSIONA.</Body>
-            </View>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -99,7 +83,8 @@ export default function Login() {
 
 const s = StyleSheet.create({
   hero: { minHeight: 260, padding: space.xl, justifyContent: 'flex-end', overflow: 'hidden' },
-  circle: { position: 'absolute', width: 260, height: 260, borderRadius: 130, borderWidth: 30, borderColor: colors.ink, right: -80, top: -70 },
+  circleWrap: { position: 'absolute', width: 260, height: 260, right: -80, top: -70 },
+  circle: { width: 260, height: 260, borderRadius: 130, borderWidth: 30, borderColor: colors.ink, borderTopColor: colors.paper },
   diag: { position: 'absolute', left: -60, right: -60, height: 46, backgroundColor: colors.paper, bottom: 40, transform: [{ rotate: '-9deg' }] },
   kicker: { fontFamily: fonts.displayMedium, color: colors.paper, letterSpacing: 4, fontSize: 14, marginBottom: 4 },
   logo: { fontFamily: fonts.display, color: colors.ink, fontSize: 68, lineHeight: 64, letterSpacing: 1 },

@@ -43,16 +43,16 @@ function Cajas() {
     return (
       <>
         <SectionTitle>{edit.id ? 'Editar caja' : 'Nueva caja'}</SectionTitle>
-        <Field label="Nombre" value={String(edit.name ?? '')} onChangeText={set('name')} />
+        <Field required label="Nombre" value={String(edit.name ?? '')} onChangeText={set('name')} />
         <Label>Medidas interiores (cm)</Label>
         <Row style={{ alignItems: 'flex-start' }}>
-          <Field label="Largo" value={String(edit.length ?? '')} onChangeText={set('length')} keyboardType="decimal-pad" style={{ flex: 1 }} />
-          <Field label="Ancho" value={String(edit.width ?? '')} onChangeText={set('width')} keyboardType="decimal-pad" style={{ flex: 1 }} />
-          <Field label="Alto" value={String(edit.height ?? '')} onChangeText={set('height')} keyboardType="decimal-pad" style={{ flex: 1 }} />
+          <Field required label="Largo" value={String(edit.length ?? '')} onChangeText={set('length')} keyboardType="decimal-pad" style={{ flex: 1 }} />
+          <Field required label="Ancho" value={String(edit.width ?? '')} onChangeText={set('width')} keyboardType="decimal-pad" style={{ flex: 1 }} />
+          <Field required label="Alto" value={String(edit.height ?? '')} onChangeText={set('height')} keyboardType="decimal-pad" style={{ flex: 1 }} />
         </Row>
         <Row style={{ alignItems: 'flex-start' }}>
-          <Field label="Peso máx. kg" value={String(edit.maxWeight ?? '')} onChangeText={set('maxWeight')} keyboardType="decimal-pad" style={{ flex: 1 }} />
-          <Field label="Costo $" value={String(edit.cost ?? '')} onChangeText={set('cost')} keyboardType="number-pad" style={{ flex: 1 }} />
+          <Field required label="Peso máx. kg" value={String(edit.maxWeight ?? '')} onChangeText={set('maxWeight')} keyboardType="decimal-pad" style={{ flex: 1 }} />
+          <Field required label="Costo $" value={String(edit.cost ?? '')} onChangeText={set('cost')} keyboardType="number-pad" style={{ flex: 1 }} />
         </Row>
         {edit.id && <Toggle label="Activa" value={edit.active !== false} onChange={(v) => setEdit((x) => ({ ...x!, active: v }))} />}
         <ErrorBox message={err} />
@@ -106,15 +106,15 @@ function Servicios() {
     return (
       <>
         <SectionTitle>{edit.name}</SectionTitle>
-        <Field label="Nombre" value={edit.name} onChangeText={setTop('name')} />
+        <Field required label="Nombre" value={edit.name} onChangeText={setTop('name')} />
         <Field label="Descripción" value={edit.description ?? ''} onChangeText={setTop('description')} />
         <Row style={{ alignItems: 'flex-start' }}>
-          <Field label="Divisor vol." value={String(edit.divisor)} onChangeText={setTop('divisor')} keyboardType="number-pad" style={{ flex: 1 }} hint="cm³/kg" />
-          <Field label="Mensajero %" value={String(edit.courierSharePct)} onChangeText={setTop('courierSharePct')} keyboardType="decimal-pad" style={{ flex: 1 }} hint="del flete" />
+          <Field required label="Divisor vol." value={String(edit.divisor)} onChangeText={setTop('divisor')} keyboardType="number-pad" style={{ flex: 1 }} hint="cm³/kg" />
+          <Field required label="Mensajero %" value={String(edit.courierSharePct)} onChangeText={setTop('courierSharePct')} keyboardType="decimal-pad" style={{ flex: 1 }} hint="del flete" />
         </Row>
         <Row style={{ alignItems: 'flex-start' }}>
-          <Field label="Seguro %" value={String(edit.insurancePct)} onChangeText={setTop('insurancePct')} keyboardType="decimal-pad" style={{ flex: 1 }} />
-          <Field label="Contra entrega %" value={String(edit.codPct)} onChangeText={setTop('codPct')} keyboardType="decimal-pad" style={{ flex: 1 }} />
+          <Field required label="Seguro %" value={String(edit.insurancePct)} onChangeText={setTop('insurancePct')} keyboardType="decimal-pad" style={{ flex: 1 }} />
+          <Field required label="Contra entrega %" value={String(edit.codPct)} onChangeText={setTop('codPct')} keyboardType="decimal-pad" style={{ flex: 1 }} />
         </Row>
         {ZONES.map((z) => {
           const r = edit.rates[z];
@@ -127,9 +127,9 @@ function Servicios() {
               })} />
               {r && (
                 <Row style={{ alignItems: 'flex-start' }}>
-                  <Field label="Base 1 kg $" value={String(r.base)} onChangeText={setRate(z, 'base')} keyboardType="number-pad" style={{ flex: 1 }} />
-                  <Field label="Kg adic. $" value={String(r.perKg)} onChangeText={setRate(z, 'perKg')} keyboardType="number-pad" style={{ flex: 1 }} />
-                  <Field label="Días" value={String(r.etaDays)} onChangeText={setRate(z, 'etaDays')} keyboardType="number-pad" style={{ flex: 1 }} />
+                  <Field required label="Base 1 kg $" value={String(r.base)} onChangeText={setRate(z, 'base')} keyboardType="number-pad" style={{ flex: 1 }} />
+                  <Field required label="Kg adic. $" value={String(r.perKg)} onChangeText={setRate(z, 'perKg')} keyboardType="number-pad" style={{ flex: 1 }} />
+                  <Field required label="Días" value={String(r.etaDays)} onChangeText={setRate(z, 'etaDays')} keyboardType="number-pad" style={{ flex: 1 }} />
                 </Row>
               )}
             </Card>

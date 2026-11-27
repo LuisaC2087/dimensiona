@@ -26,7 +26,7 @@ const SLIDES: Record<Role, { icon: IconName; title: string; body: string }[]> = 
   ],
   admin: [
     { icon: 'view-dashboard', title: 'Panel', body: 'Métricas de la operación y alertas: envíos sin mensajero, novedades y mensajeros por aprobar.' },
-    { icon: 'bank', title: 'Finanzas', body: 'Factura cada mes, liquida los recaudos de las tiendas y paga a los mensajeros.' },
+    { icon: 'bank', title: 'Finanzas', body: 'Cada envío genera su cuenta de cobro; registra pagos, liquida los recaudos de las tiendas y paga a los mensajeros.' },
     { icon: 'message-alert', title: 'PQR', body: 'Responde peticiones, quejas y reclamos dentro de los 15 días hábiles.' },
     { icon: 'package-variant-closed', title: 'Tarifas', body: 'Ajusta cajas, servicios y precios por zona, incluidas las tarifas de tu contrato con cada transportadora.' },
   ],

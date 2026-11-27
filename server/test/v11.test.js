@@ -95,17 +95,20 @@ describe('transportadoras', () => {
 });
 
 describe('facturación y liquidaciones', () => {
-  test('factura mensual, impresión, pago y protección', async () => {
+  test('cuenta de cobro por envío, impresión, pago y protección', async () => {
     const period = new Date().toISOString().slice(0, 7);
     assert.equal((await S.call('POST', '/api/admin/billing/run', { token: T, body: { period } })).status, 403);
     assert.equal((await S.call('POST', '/api/admin/billing/run', { token: A, body: { period: '2026-13' } })).status, 400);
-    const run = (await S.call('POST', '/api/admin/billing/run', { token: A, body: { period } })).body;
-    assert.ok(run.invoices.length >= 1);
-    const inv = run.invoices[0];
+    const sh = (await S.call('POST', '/api/shipments', { token: T, body: { items: [{ productId, qty: 1 }], recipientName: 'Ana', recipientPhone: '3001234567', address: 'Cl 1', city: 'Bogotá' } })).body;
+    const b = (await S.call('GET', '/api/billing', { token: T })).body;
+    const inv = b.invoices.find((i) => i.items.some((it) => it.shipmentId === sh.id));
+    assert.ok(inv, 'cada envío genera su cuenta de cobro al crearse');
+    assert.equal(inv.items.length, 1);
+    assert.equal(inv.total, sh.price);
     assert.equal(inv.subtotal + inv.iva, inv.total);
     assert.match(inv.number, /^DM-\d{6}$/);
+    await S.call('POST', '/api/admin/billing/run', { token: A, body: { period } }); // recupera envíos sin cuenta (datos demo)
     assert.equal((await S.call('POST', '/api/admin/billing/run', { token: A, body: { period } })).body.invoices.length, 0);
-    const b = (await S.call('GET', '/api/billing', { token: T })).body;
     assert.ok(b.invoices.length >= 1 && b.owed > 0);
     const link = (await S.call('POST', '/api/print-links', { token: T, body: { doc: 'invoice', id: b.invoices[0].id } })).body.url;
     assert.match(await (await fetch(`${S.base}${link}`)).text(), /Cuenta de cobro/);
@@ -117,7 +120,7 @@ describe('facturación y liquidaciones', () => {
   test('anular una factura libera sus envíos', async () => {
     await S.call('POST', '/api/shipments', { token: T, body: { items: [{ productId, qty: 1 }], recipientName: 'Ana', recipientPhone: '3001234567', address: 'Cl 1', city: 'Bogotá' } });
     const period = new Date().toISOString().slice(0, 7);
-    const inv = (await S.call('POST', '/api/admin/billing/run', { token: A, body: { period } })).body.invoices[0];
+    const inv = (await S.call('GET', '/api/billing', { token: T })).body.invoices.find((i) => i.status === 'pendiente');
     assert.equal((await S.call('POST', `/api/admin/invoices/${inv.id}/void`, { token: A })).status, 200);
     assert.equal((await S.call('POST', '/api/admin/billing/run', { token: A, body: { period } })).body.invoices.length, 1);
   });

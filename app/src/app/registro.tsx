@@ -43,13 +43,13 @@ export default function Registro() {
           ? 'Mide tus productos con la cámara, empaca en la caja justa y gestiona tus envíos.'
           : 'Toma envíos cerca de ti, verifica medidas con AR (realidad aumentada) y entrega. Tu cuenta se activa cuando administración la apruebe.'}
       </Body>
-      {role === 'tienda' && <Field label="Nombre del emprendimiento" value={f.storeName} onChangeText={set('storeName')} placeholder="Ej: Luna Velas & Co." />}
-      <Field label="Tu nombre" value={f.name} onChangeText={set('name')} autoComplete="name" />
-      <Field label="Correo" value={f.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
-      <Field label="Contraseña" value={f.password} onChangeText={set('password')} secureTextEntry hint="Mínimo 8 caracteres" />
-      <Field label="Celular / WhatsApp" value={f.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
-      <Field label="Ciudad" value={f.city} onChangeText={set('city')} placeholder="Bogotá" hint={role === 'tienda' ? 'Desde donde despachas (define la zona de tarifa)' : 'Donde haces entregas'} />
-      {role === 'tienda' && <Field label="Dirección de recogida" value={f.address} onChangeText={set('address')} placeholder="Cra 15 #93-20" />}
+      {role === 'tienda' && <Field required label="Nombre del emprendimiento" value={f.storeName} onChangeText={set('storeName')} placeholder="Ej: Luna Velas & Co." />}
+      <Field required label="Tu nombre" value={f.name} onChangeText={set('name')} autoComplete="name" />
+      <Field required label="Correo" value={f.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
+      <Field required label="Contraseña" value={f.password} onChangeText={set('password')} secureTextEntry hint="Mínimo 8 caracteres" />
+      <Field required label="Celular / WhatsApp" value={f.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
+      <Field required label="Ciudad" value={f.city} onChangeText={set('city')} placeholder="Bogotá" hint={role === 'tienda' ? 'Desde donde despachas (define la zona de tarifa)' : 'Donde haces entregas'} />
+      {role === 'tienda' && <Field required label="Dirección de recogida" value={f.address} onChangeText={set('address')} placeholder="Cra 15 #93-20" />}
       {role === 'tienda' && <Field label="Instagram (opcional)" value={f.instagram} onChangeText={set('instagram')} autoCapitalize="none" placeholder="@mitienda" />}
       {role === 'mensajero' && (
         <Segmented value={f.vehicle} onChange={set('vehicle')} options={[{ value: 'Moto', label: 'Moto' }, { value: 'Bicicleta', label: 'Bici' }, { value: 'Carro', label: 'Carro' }]} />

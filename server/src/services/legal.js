@@ -8,7 +8,7 @@ import { Router } from 'express';
 import { h, notFound } from '../auth.js';
 import { ROOT } from '../config.js';
 
-export const LEGAL_VERSION = '1.2';
+export const LEGAL_VERSION = '1.3';
 const VERSION_DATE = '25 de noviembre de 2026';
 
 const DOCS = {

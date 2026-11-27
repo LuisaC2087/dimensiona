@@ -39,7 +39,7 @@ La Tienda debe **confirmar las medidas y el peso** antes de despachar. El peso *
 
 ## 4A. Facturación y liquidaciones
 
-- Al cierre de cada mes se emite una cuenta de cobro con los envíos del periodo. Los precios mostrados incluyen el IVA aplicable. El plazo de pago es de quince (15) días calendario.
+- El servicio se paga por envío: al crear cada guía se emite su cuenta de cobro, que debe pagarse antes de la recogida. No hay mensualidades ni mínimos. Los precios mostrados incluyen el IVA aplicable. Si el envío se cancela antes de la recogida, su cuenta pendiente se anula.
 - La factura electrónica de venta se expide a través del proveedor tecnológico autorizado por la DIAN que el Operador tenga contratado.
 - Los valores recaudados contra entrega se transfieren a la Tienda en liquidaciones periódicas, una vez entregado el envío. El Operador puede compensar facturas vencidas con recaudos pendientes, previa notificación.
 - Las ganancias de los Mensajeros se liquidan periódicamente por los envíos entregados.
@@ -89,7 +89,7 @@ El Operador puede suspender o cancelar cuentas que incumplan estos Términos. Pu
 
 ## 12. Disponibilidad
 
-La Plataforma se ofrece «tal como está». Procuramos su funcionamiento continuo, pero puede haber interrupciones por mantenimiento, fallas de terceros o de conectividad. El servidor gratuito puede tardar cerca de un minuto en responder tras un periodo de inactividad.
+La Plataforma se ofrece «tal como está». Procuramos su funcionamiento continuo, pero puede haber interrupciones por mantenimiento, fallas de terceros o de conectividad.
 
 ## 13. Comunicaciones electrónicas
 

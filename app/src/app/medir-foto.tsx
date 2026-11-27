@@ -12,6 +12,7 @@ import Svg, { Circle, G, Line } from 'react-native-svg';
 import { api } from '../api/client';
 import type { VisionObject } from '../api/types';
 import { Body, Button, Card, ErrorBox, Header, Label, Row, Screen, SectionTitle, Segmented, Tag } from '../components/ui';
+import { LoadingDots } from '../components/motion';
 import { normalizeDims, photoMeasureCm, REFERENCES, type Px } from '../lib/measure';
 import { toJpegBase64 } from '../lib/image';
 import { ensureAiConsent } from '../lib/consent';
@@ -171,7 +172,7 @@ function MedirFoto() {
           </View>
         ))}
       </Row>
-      <Button label={ai.busy ? 'Identificando…' : 'Identificar producto con IA'} variant="outline" onPress={identify} disabled={ai.busy || (!shots.top.uri && !shots.side.uri)} />
+      {ai.busy ? <Row style={{ justifyContent: 'center', gap: space.sm }}><Body muted>La IA está analizando</Body><LoadingDots color={colors.red} /></Row> : <Button label="Identificar producto con IA" variant="outline" onPress={identify} disabled={!shots.top.uri && !shots.side.uri} />}
       {ai.obj && <Row wrap style={{ gap: 6 }}><Tag label={ai.obj.nombre} color={colors.red} /><Tag label={ai.obj.categoria} />{ai.obj.fragil && <Tag label="Frágil" color={colors.warn} />}</Row>}
       {ai.error && <Body muted>{ai.error}</Body>}
       <Button label="Usar estas medidas" variant="ink" onPress={confirm} disabled={!done} />

@@ -41,7 +41,7 @@ export default function Soporte() {
             {c.response && <Body style={{ backgroundColor: colors.paper2, padding: 8 }}>Respuesta: {c.response}</Body>}
             {c.status !== 'cerrada' && (open === c.id ? (
               <>
-                <Field label="Respuesta" value={text} onChangeText={setText} multiline />
+                <Field required label="Respuesta" value={text} onChangeText={setText} multiline />
                 <Row wrap>
                   <Button small icon="send" label="Responder y cerrar" disabled={text.length < 5} onPress={() => respond(c.id!, true)} />
                   <Button small variant="outline" label="En trámite" disabled={text.length < 5} onPress={() => respond(c.id!, false)} />

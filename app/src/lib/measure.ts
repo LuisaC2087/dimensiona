@@ -11,6 +11,16 @@ export type SurfaceKind = 'plane' | 'featurePoint' | 'depth';
 
 export const MIN_SEPARATION_M = 0.01;
 
+/** Rango de distancia cámara–producto en que la medición AR es confiable. */
+export const MIN_DISTANCE_M = 0.3;
+export const MAX_DISTANCE_M = 1.0;
+export type DistanceStatus = 'cerca' | 'ok' | 'lejos';
+
+/** Clasifica la distancia de la cámara al punto apuntado frente al rango permitido. */
+export function distanceStatus(d: number): DistanceStatus {
+  return d < MIN_DISTANCE_M ? 'cerca' : d > MAX_DISTANCE_M ? 'lejos' : 'ok';
+}
+
 export function distance3(a: Point3, b: Point3): number {
   return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 }

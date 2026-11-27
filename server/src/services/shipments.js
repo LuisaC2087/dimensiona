@@ -1,6 +1,7 @@
 /** Servicio de envíos: creación, ciclo de vida, mensajeros, verificación de medidas y rastreo público. */
 import { randomInt } from 'node:crypto';
 import { Router } from 'express';
+import { invoiceShipment, voidShipmentInvoice } from './billing.js';
 import { auth, bad, forbidden, h, notFound, nums } from '../auth.js';
 import { many, one, query } from '../db.js';
 import { chargeableKg } from '../lib/pricing.js';
@@ -67,6 +68,7 @@ export async function createShipmentFor(store, b, userId) {
       quote.baselineTotal ?? null,
       plan.declaredValue, Number(b.codAmount) || 0, quote.total, courierFee, carrier, recipientEmail]);
   await query('INSERT INTO shipment_events (shipment_id, status, note, by_user) VALUES ($1,$2,$3,$4)', [row.id, 'creado', 'Guía creada', userId]);
+  await invoiceShipment(row.id);
   if (carrier !== 'propia') {
     const g = await createGuide(carrier, {
       code, store,
@@ -157,6 +159,7 @@ shipmentsRouter.post('/shipments/:id/cancel', auth('tienda', 'admin'), h(async (
   const s = await getShipmentFor(req.user, req.params.id);
   if (!['creado', 'asignado'].includes(s.status)) throw bad('Solo puedes cancelar envíos que aún no se han recogido');
   await query("UPDATE shipments SET status='cancelado', updated_at=now() WHERE id=$1", [s.id]);
+  await voidShipmentInvoice(s.id);
   await addEvent(s.id, 'cancelado', req.user.id, { note: req.body?.note });
   await shipmentChanged(s.id, 'cancelado', { actorId: req.user.id });
   res.json({ ok: true });

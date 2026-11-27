@@ -48,7 +48,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, 'Sin conexión con el servidor. Revisa tu internet (el servidor gratuito puede tardar ~1 min en despertar).');
+    throw new ApiError(0, 'Sin conexión con el servidor. Revisa tu internet e inténtalo de nuevo en un momento.');
   }
   if (res.status === 204) return undefined as T;
   let data: any = null;
@@ -69,7 +69,7 @@ const del = <T>(p: string, b?: unknown) => request<T>('DELETE', p, b);
 export interface ItemInput { productId?: string; qty: number; name?: string; length?: number; width?: number; height?: number; weight?: number; fragile?: boolean }
 
 export const api = {
-  config: () => get<{ apkUrl: string | null; version: string; vision: boolean; mail: boolean; carriers: CarrierInfo[]; notifications?: NotificationChannels }>('/config'),
+  config: () => get<{ apkUrl: string | null; videoUrl?: string | null; version: string; vision: boolean; mail: boolean; carriers: CarrierInfo[]; notifications?: NotificationChannels }>('/config'),
   login: (email: string, password: string) => post<{ token: string; user: User }>('/auth/login', { email, password }),
   register: (b: Record<string, unknown>) => post<{ token?: string; user: User; pending?: boolean }>('/auth/register', b),
   me: () => get<Me>('/auth/me'),

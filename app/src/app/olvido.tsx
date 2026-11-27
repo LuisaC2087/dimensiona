@@ -12,7 +12,7 @@ export default function Olvido() {
   return (
     <Screen header={<Header title="Recuperar acceso" kicker="Contraseña" onBack={() => router.back()} />}>
       <Body>Escribe el correo de tu cuenta. Si está registrado te enviaremos un enlace para crear una contraseña nueva.</Body>
-      <Field label="Correo" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
+      <Field required label="Correo" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
       <ErrorBox message={error} />
       {msg && <Card accent={colors.ok}><Body>{msg}</Body></Card>}
       <Button label="Enviar enlace" icon="email-fast" loading={busy} disabled={!email.includes('@')}

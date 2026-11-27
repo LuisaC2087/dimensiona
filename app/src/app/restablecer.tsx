@@ -22,8 +22,8 @@ export default function Restablecer() {
         </Card>
       ) : (
         <>
-          <Field label="Contraseña nueva" value={pwd} onChangeText={setPwd} secureTextEntry hint="Mínimo 8 caracteres" />
-          <Field label="Repítela" value={pwd2} onChangeText={setPwd2} secureTextEntry error={mismatch ? 'No coinciden' : null} />
+          <Field required label="Contraseña nueva" value={pwd} onChangeText={setPwd} secureTextEntry hint="Mínimo 8 caracteres" />
+          <Field required label="Repítela" value={pwd2} onChangeText={setPwd2} secureTextEntry error={mismatch ? 'No coinciden' : null} />
           <ErrorBox message={error} />
           <Button label="Guardar" icon="lock-reset" loading={busy} disabled={!token || pwd.length < 8 || pwd !== pwd2}
             onPress={async () => { setBusy(true); setError(null); try { await api.reset(token!, pwd); setDone(true); } catch (e: any) { setError(e.message); } finally { setBusy(false); } }} />

@@ -13,7 +13,7 @@ import {
   type ViroAnchor, type ViroCameraARHitTest,
 } from '@reactvision/react-viro';
 import { minAreaRect, type Point2, type Point3, type SurfaceKind, type TrackingState } from '../lib/measure';
-import type { ARCallbacks, ARDrawing, ARHandle, BoxGhost, ProductOverlay } from './types';
+import type { ARCallbacks, ARDrawing, ARHandle, AiBox, BoxGhost, ProductOverlay } from './types';
 
 export * from './types';
 
@@ -108,6 +108,7 @@ function MeasureScene(props: { arSceneNavigator: { viroAppProps: { callbacks: AR
         </ViroARPlane>
       ))}
       {drawing.product && <ProductBox o={drawing.product} ghost={drawing.ghost ?? null} />}
+      {drawing.aiBox && <AiProductBox o={drawing.aiBox} ghost={drawing.product ? null : drawing.ghost ?? null} />}
       {drawing.draft && <ViroSphere position={v(drawing.draft)} radius={0.006} materials={['dmDraft']} />}
     </ViroARScene>
   );
@@ -128,6 +129,23 @@ function Pill({ at, text, ink }: { at: [number, number, number]; text: string; i
       <ViroText text={text} position={[0, 0, 0.002]} scale={[0.08, 0.08, 0.08]} width={w * 12.5} height={PILL_H * 12.5}
         style={{ fontFamily: 'sans-serif-condensed', fontSize: 22, fontWeight: '700', color: '#F8F4EC', textAlign: 'center', textAlignVertical: 'center' }} />
     </ViroNode>
+  );
+}
+
+/** Caja del producto a partir de la estimación de la IA (y la caja sugerida alrededor). */
+function AiProductBox({ o, ghost }: { o: AiBox; ghost: BoxGhost | null }) {
+  const box = (lm: number, wm: number, hm: number) => {
+    const hl = lm / 2, hw = wm / 2, { x, y, z } = o.base;
+    const base: Point2[] = [{ x: x - hl, z: z - hw }, { x: x + hl, z: z - hw }, { x: x + hl, z: z + hw }, { x: x - hl, z: z + hw }];
+    return [closed(base, y), closed(base, y + hm), ...base.map((p) => [l3(p, y), l3(p, y + hm)])];
+  };
+  return (
+    <>
+      {box(o.lengthM, o.widthM, o.heightM).map((pts, i) => <ViroPolyline key={'a' + i} points={pts} thickness={0.005} materials={['dmLine']} />)}
+      <Pill at={[o.base.x, o.base.y + o.heightM + 0.04, o.base.z]} text={o.label} ink />
+      {ghost && box(ghost.lengthM, ghost.widthM, ghost.heightM).map((pts, i) => <ViroPolyline key={'ag' + i} points={pts} thickness={0.006} materials={['dmRed']} />)}
+      {ghost && <Pill at={[o.base.x, o.base.y + ghost.heightM + 0.1, o.base.z]} text={ghost.label} />}
+    </>
   );
 }
 

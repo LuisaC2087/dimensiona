@@ -79,16 +79,26 @@ app.get('/marca', (_req, res) => res.sendFile(path.join(ROOT, 'public', 'marca.h
 
 const api = express.Router();
 api.get('/config', (_req, res) => res.json({
-  apkUrl: config.apkUrl ? '/descargar' : null, version: config.appVersion, vision: !!config.geminiKey,
+  apkUrl: config.apkUrl ? '/descargar' : null, videoUrl: config.videoUrl || null, version: config.appVersion, vision: !!config.geminiKey,
   mail: mailEnabled(), carriers: listCarriers(), notifications: channelStatus(),
 }));
 api.use(usersRouter, passwordsRouter, catalogRouter, logisticsRouter, shipmentsRouter, visionRouter, billingRouter, printApiRouter, claimsRouter, auditRouter, notificationsRouter);
 api.use((_req, _res, next) => next(new HttpError(404, 'Ruta no encontrada')));
 app.use('/api', api);
 
-app.get('/descargar', (_req, res) => {
+// Se sirve a través del servidor para que el archivo descargado se llame «Dimensiona.apk».
+app.get('/descargar', async (_req, res, next) => {
   if (!config.apkUrl) return res.status(503).send('El APK aún no está publicado. Vuelve pronto.');
-  res.redirect(302, config.apkUrl);
+  try {
+    const up = await fetch(config.apkUrl);
+    if (!up.ok || !up.body) return res.redirect(302, config.apkUrl);
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+    res.setHeader('Content-Disposition', 'attachment; filename="Dimensiona.apk"');
+    const len = up.headers.get('content-length');
+    if (len) res.setHeader('Content-Length', len);
+    const { Readable } = await import('node:stream');
+    Readable.fromWeb(up.body).on('error', next).pipe(res);
+  } catch (err) { next(err); }
 });
 
 // App web (Expo export). Rutas desconocidas bajo /app devuelven index.html (SPA).

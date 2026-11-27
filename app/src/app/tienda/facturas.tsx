@@ -18,7 +18,7 @@ export default function Facturas() {
   return (
     <Screen header={<Header title="Facturas" kicker="Cobros y recaudos" icon="receipt" />} onRefresh={reload} refreshing={refreshing}>
       <Tip id="facturas" title="¿Cómo te cobramos?" icon="information-outline">
-        Cada mes reunimos tus envíos en una sola cuenta de cobro (IVA incluido) con 15 días para pagar. El dinero que tus clientes pagan contra entrega te lo transferimos en liquidaciones.
+        Pagas por envío: cada guía genera su propia cuenta de cobro (IVA incluido), que se paga antes de la recogida. Sin mensualidades ni mínimos. El dinero que tus clientes pagan contra entrega te lo transferimos en liquidaciones.
       </Tip>
       <ErrorBox message={error ?? err} onRetry={reload} />
       {loading && !data ? <Loading /> : data && (
@@ -34,7 +34,7 @@ export default function Facturas() {
 
           <SectionTitle icon="receipt">Mis facturas</SectionTitle>
           {data.invoices.length ? data.invoices.map((inv) => <InvoiceCard key={inv.id} inv={inv} onOpen={() => open(inv.id)} />)
-            : <Empty icon="receipt" title="Aún sin facturas" body="Tu primera cuenta de cobro aparecerá al cierre del mes." />}
+            : <Empty icon="receipt" title="Aún sin facturas" body="Tu primera cuenta de cobro aparecerá al crear tu primer envío." />}
 
           <SectionTitle icon="bank-transfer-in">Liquidaciones de recaudos</SectionTitle>
           {data.settlements.length ? data.settlements.map((s) => (

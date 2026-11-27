@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 import { revokeAiConsent } from '../lib/consent';
 import { resetWelcome } from '../lib/onboarding';
 import { router } from 'expo-router';
-import { api, getBaseUrl } from '../api/client';
+import { api } from '../api/client';
 import { useAuth } from '../state/auth';
 import { useTour } from '../tour/TourProvider';
 import { colors } from '../theme';
@@ -53,14 +53,13 @@ export function AccountScreen({ onBack }: { onBack?: () => void } = {}) {
       <Card accent={colors.red}>
         <Tag label={ROLE_LABEL[user.role]} color={colors.red} />
         <KeyValue k="Correo" v={user.email} />
-        <KeyValue k="Servidor" v={getBaseUrl() || 'este sitio'} />
         <KeyValue k="Versión de la app" v={Constants.expoConfig?.version ?? '—'} />
       </Card>
 
       {user.role === 'tienda' && (
         <>
           <SectionTitle>Mi negocio</SectionTitle>
-          <Field label="Nombre del emprendimiento" value={f.storeName} onChangeText={set('storeName')} />
+          <Field required label="Nombre del emprendimiento" value={f.storeName} onChangeText={set('storeName')} />
           <Field label="Ciudad de despacho" value={f.storeCity} onChangeText={set('storeCity')} hint="Define si tus envíos son locales, regionales o nacionales" />
           <Field label="Dirección de recogida" value={f.address} onChangeText={set('address')} />
           <Field label="Instagram" value={f.instagram} onChangeText={set('instagram')} autoCapitalize="none" />
@@ -69,7 +68,7 @@ export function AccountScreen({ onBack }: { onBack?: () => void } = {}) {
       )}
 
       <SectionTitle>Mis datos</SectionTitle>
-      <Field label="Nombre" value={f.name} onChangeText={set('name')} />
+      <Field required label="Nombre" value={f.name} onChangeText={set('name')} />
       <Field label="Celular" value={f.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
       <Field label="Ciudad" value={f.city} onChangeText={set('city')} />
       {user.role === 'mensajero' && (
@@ -80,8 +79,8 @@ export function AccountScreen({ onBack }: { onBack?: () => void } = {}) {
       <Button label="Guardar cambios" icon="content-save" onPress={save} loading={busy} />
 
       <SectionTitle>Contraseña</SectionTitle>
-      <Field label="Contraseña actual" value={pwd.password} onChangeText={(v) => setPwd((p) => ({ ...p, password: v }))} secureTextEntry />
-      <Field label="Contraseña nueva" value={pwd.newPassword} onChangeText={(v) => setPwd((p) => ({ ...p, newPassword: v }))} secureTextEntry hint="Mínimo 8 caracteres" />
+      <Field required label="Contraseña actual" value={pwd.password} onChangeText={(v) => setPwd((p) => ({ ...p, password: v }))} secureTextEntry />
+      <Field required label="Contraseña nueva" value={pwd.newPassword} onChangeText={(v) => setPwd((p) => ({ ...p, newPassword: v }))} secureTextEntry hint="Mínimo 8 caracteres" />
       <Button label="Cambiar contraseña" variant="outline" onPress={changePwd} disabled={!pwd.password || !pwd.newPassword} />
 
       <SectionTitle icon="bell">Avisos</SectionTitle>

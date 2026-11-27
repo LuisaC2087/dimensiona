@@ -1,6 +1,8 @@
 /**
  * Servicio de facturación y liquidaciones.
- * - Factura mensual por tienda con todos sus envíos no anulados del periodo (precios con IVA incluido).
+ * - Cuenta de cobro por envío: se emite al crear cada guía (precio con IVA incluido) y se paga antes
+ *   de la recogida. Si se cancela el envío, la cuenta pendiente se anula.
+ * - El cierre por periodo queda solo para recuperar envíos sin cuenta (p. ej. tras anular una).
  *   Es un documento de cobro interno: la factura electrónica ante la DIAN debe emitirse con un
  *   proveedor tecnológico autorizado (ver README).
  * - Liquidaciones: recaudos contra entrega que se le pagan a la tienda y pagos a mensajeros.
@@ -14,6 +16,7 @@ import { notifyUsers } from './notifications.js';
 export const IVA_PCT = Number(process.env.BILLING_IVA_PCT ?? 19);
 const PREFIX = process.env.BILLING_PREFIX ?? 'DM';
 const DUE_DAYS = 15;
+const SHIPMENT_DUE_DAYS = 1;
 
 const NUMS = ['subtotal', 'iva', 'total', 'amount'];
 const parse = (v) => (typeof v === 'string' ? JSON.parse(v) : v);
@@ -35,6 +38,30 @@ export function periodRange(period) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) throw bad('Periodo inválido (AAAA-MM)');
   const [y, m] = period.split('-').map(Number);
   return { from: new Date(Date.UTC(y, m - 1, 1)).toISOString(), to: new Date(Date.UTC(y, m, 1)).toISOString() };
+}
+
+/** Emite la cuenta de cobro de un solo envío (modelo de pago por envío). */
+export async function invoiceShipment(shipmentId) {
+  const r = await one(`SELECT id, code, store_id, created_at, city, price, quote FROM shipments WHERE id=$1 AND invoice_id IS NULL AND status <> 'cancelado'`, [shipmentId]);
+  if (!r) return null;
+  const total = Number(r.price);
+  const { subtotal, iva } = splitIva(total);
+  const seq = await one("SELECT nextval('invoice_number_seq')::int AS n");
+  const number = `${PREFIX}-${String(seq.n).padStart(6, '0')}`;
+  const period = new Date(r.created_at).toISOString().slice(0, 7);
+  const items = [{ shipmentId: r.id, code: r.code, date: r.created_at, city: r.city, service: parse(r.quote)?.serviceName, total }];
+  const inv = await one(`INSERT INTO invoices (number, store_id, period, items, subtotal, iva, total, due_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7, now() + interval '${SHIPMENT_DUE_DAYS} days') RETURNING *`, [number, r.store_id, period, JSON.stringify(items), subtotal, iva, total]);
+  await query('UPDATE shipments SET invoice_id=$1 WHERE id=$2', [inv.id, r.id]);
+  return invoiceOut(inv);
+}
+
+/** Al cancelar un envío se anula su cuenta de cobro si aún no está pagada. */
+export async function voidShipmentInvoice(shipmentId) {
+  const s = await one('SELECT invoice_id FROM shipments WHERE id=$1', [shipmentId]);
+  if (!s?.invoice_id) return;
+  const r = await one("UPDATE invoices SET status='anulada' WHERE id=$1 AND status='pendiente' RETURNING id", [s.invoice_id]);
+  if (r) await query('UPDATE shipments SET invoice_id=NULL WHERE id=$1', [shipmentId]);
 }
 
 /** Genera las facturas del periodo para todas las tiendas con envíos sin facturar. */

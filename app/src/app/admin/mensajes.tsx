@@ -29,7 +29,7 @@ export default function Mensajes() {
             <Body muted>
               {real
                 ? `Se envía con la API oficial de WhatsApp (plantilla «${data.channels.template}»).`
-                : 'Sin credenciales de Meta: los mensajes quedan listos y la tienda los envía con un toque. Para enviarlos solos, configura WHATSAPP_TOKEN y WHATSAPP_PHONE_ID en Render y aprueba la plantilla.'}
+                : 'Sin credenciales de Meta: los mensajes quedan listos y la tienda los envía con un toque. Para enviarlos solos, configura WHATSAPP_TOKEN y WHATSAPP_PHONE_ID en el servidor y aprueba la plantilla.'}
             </Body>
             <KeyValue k="Correo (SMTP)" v={data.channels.email ? 'Configurado' : 'Sin configurar'} />
             <KeyValue k="Teléfonos con notificaciones" v={String(data.totals.dispositivos)} />

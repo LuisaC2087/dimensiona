@@ -28,6 +28,8 @@ services:
         value: "true" # cuentas demo tienda@demo.app y mensajero@demo.app (demo1234)
       - key: APK_URL
         sync: false # enlace al APK (EAS o GitHub Releases)
+      - key: VIDEO_URL
+        sync: false # video de demostración de la app (próximamente)
       - key: APP_VERSION
         value: 1.3.0
       - key: GEMINI_API_KEY

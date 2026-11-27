@@ -3,7 +3,9 @@
  *  - AUTO: apunta la retícula a la cara superior del producto y toca «Seleccionar». ARCore la detecta
  *    como plano: largo y ancho salen de su contorno y el alto de la distancia a la superficie de apoyo.
  *  - PUNTOS: marca dos puntos por arista (largo, ancho, alto) con la retícula.
- *  - IA: identifica el producto en la imagen (nombre, categoría, frágil) y da una estimación de respaldo.
+ *  - IA: identifica el producto en la imagen (nombre, categoría, frágil) y da una estimación de respaldo,
+ *    que se dibuja en AR como una caja sobre el punto apuntado.
+ * Solo se mide entre MIN_DISTANCE_M y MAX_DISTANCE_M de la cámara; una guía inicial explica cómo apuntar.
  * Con las tres medidas, la app pide la caja recomendada y la dibuja en AR alrededor del producto.
  */
 import { RequireAuth } from '../components/RoleGate';
@@ -16,10 +18,11 @@ import type { VisionObject } from '../api/types';
 import { ARProductView, type ARCallbacks, type ARDrawing, type ARHandle, type BoxGhost, type DetectedPlane, type ReticleHit } from '../ar/ARProductView';
 import { checkARSupport, requestCamera, type ARSupport } from '../ar/compat';
 import { Button } from '../components/ui';
+import { LoadingDots } from '../components/motion';
 import { toJpegBase64 } from '../lib/image';
 import { ensureAiConsent } from '../lib/consent';
 import {
-  distance3, heightAboveSupport, MIN_SEPARATION_M, normalizeDims, reliability, reliabilityLabel, toCm,
+  distance3, distanceStatus, heightAboveSupport, MAX_DISTANCE_M, MIN_DISTANCE_M, MIN_SEPARATION_M, normalizeDims, reliability, reliabilityLabel, toCm,
   type Dim, type HPlane, type Point3, type TrackingState,
 } from '../lib/measure';
 import { measureBus } from '../state/measureBus';
@@ -86,6 +89,8 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   const [ai, setAi] = useState<{ busy: boolean; list: VisionObject[] | null; chosen: VisionObject | null; error: string | null }>({ busy: false, list: null, chosen: null, error: null });
   const [ghost, setGhost] = useState<(BoxGhost & { fill: number; name: string }) | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
+  const [showGuide, setShowGuide] = useState(true);
+  const [aiBase, setAiBase] = useState<Point3 | null>(null);
   const handle = useRef<ARHandle | null>(null);
   const lastUi = useRef(0);
 
@@ -113,6 +118,14 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   }, [selPlane, hPlanes, mode, planeTick]);
 
   const done = values.length != null && values.width != null && values.height != null;
+  const dist = reticle?.cameraDistanceM ?? null;
+  const dStat = dist == null ? null : distanceStatus(dist);
+  const RANGE = `${Math.round(MIN_DISTANCE_M * 100)} y ${Math.round(MAX_DISTANCE_M * 100)} cm`;
+  const outOfRange = () => {
+    if (dStat === 'cerca') { setMessage(`Muy cerca: aléjate hasta quedar entre ${RANGE} del producto.`); return true; }
+    if (dStat === 'lejos') { setMessage(`Muy lejos: acércate hasta quedar entre ${RANGE} del producto.`); return true; }
+    return false;
+  };
 
   // Caja recomendada (servicio de embalaje) para dibujarla en AR.
   useEffect(() => {
@@ -145,9 +158,13 @@ function ARMeasure({ purpose }: { purpose?: string }) {
       };
     }
     const surfaces = [...planes.current.values()].filter((p) => p.id !== selId).map((p) => ({ id: p.id, outline: p.outline }));
-    return { points: pts, segments, labels, draft, product, ghost: product ? ghost : null, surfaces };
+    const est = ai.chosen?.estimado;
+    const aiBox = !product && aiBase && est?.largo && est.ancho && est.alto
+      ? { base: aiBase, lengthM: est.largo / 100, widthM: est.ancho / 100, heightM: est.alto / 100, label: `IA ${fmt(est.largo)}×${fmt(est.ancho)}×${fmt(est.alto)} CM` }
+      : null;
+    return { points: pts, segments, labels, draft, product, ghost, surfaces, aiBox };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pts, segs, reticle, mode, selPlane, hPlanes, ghost, planeTick, selId]);
+  }, [pts, segs, reticle, mode, selPlane, hPlanes, ghost, planeTick, selId, ai.chosen, aiBase]);
 
   const nextMissing = (v: Record<Dim, number | null>, from: Dim): Dim => DIMS.find((d) => v[d] == null && d !== from) ?? from;
 
@@ -155,6 +172,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   const selectTop = () => {
     setMessage(null);
     if (!reticle) return setMessage('Apunta la retícula a la cara superior del producto.');
+    if (outOfRange()) return;
     let best: DetectedPlane | null = null;
     for (const p of planes.current.values()) {
       if (p.kind !== 'floor') continue;
@@ -177,6 +195,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   const placePoint = () => {
     setMessage(null);
     if (!reticle || tracking === 'lost') return setMessage('Sin seguimiento: mueve el teléfono despacio.');
+    if (outOfRange()) return;
     const p = reticle.position;
     if (pts.length === 0) { setPts([p]); return; }
     const d = distance3(pts[0], p);
@@ -194,6 +213,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
     if (!(await ensureAiConsent())) return;
     setAi((a) => ({ ...a, busy: true, error: null }));
     try {
+      setAiBase(reticle?.position ?? null);
       const uri = await handle.current?.capture();
       if (!uri) throw new Error('No se pudo tomar la imagen de la cámara.');
       const b64 = await toJpegBase64(uri);
@@ -212,7 +232,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   };
 
   const resetAll = () => {
-    setSelId(null); setValues({ length: null, width: null, height: null }); setScores([]); setPts([]); setSegs([]); setActive('length'); setGhost(null); setMessage(null);
+    setAiBase(null); setSelId(null); setValues({ length: null, width: null, height: null }); setScores([]); setPts([]); setSegs([]); setActive('length'); setGhost(null); setMessage(null);
   };
 
   const confirm = () => {
@@ -225,6 +245,8 @@ function ARMeasure({ purpose }: { purpose?: string }) {
 
   const conf = scores.length ? Math.min(...scores) : null;
   const hint = message
+    ?? (ai.busy ? 'La IA está analizando la imagen…' : null)
+    ?? (dStat === 'cerca' ? `Muy cerca: aléjate (entre ${RANGE})` : dStat === 'lejos' ? `Muy lejos: acércate (entre ${RANGE})` : null)
     ?? (tracking !== 'good' && CAUSE[cause] ? CAUSE[cause]
       : mode === 'auto'
         ? (selPlane ? (done ? 'Listo. Revisa la caja roja sugerida y confirma.' : 'Midiendo… mantén el teléfono quieto') : planes.current.size ? 'Apunta la retícula a la cara superior del producto y toca SELECCIONAR' : 'Mueve el teléfono despacio sobre la mesa para detectar superficies')
@@ -250,10 +272,21 @@ function ARMeasure({ purpose }: { purpose?: string }) {
               </Pressable>
             ))}
           </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Cómo medir" onPress={() => setShowGuide(true)} style={sq}>
+            <Text style={{ color: colors.paper, fontSize: 22, fontFamily: fonts.display }}>?</Text>
+          </Pressable>
           <View accessibilityLabel={`Seguimiento ${tracking}`} style={[sq, { backgroundColor: 'rgba(20,20,20,0.75)' }]}>
             <View style={{ width: 16, height: 16, backgroundColor: TRACK_COLOR[tracking], transform: [{ rotate: '45deg' }] }} />
           </View>
         </View>
+
+        {dist != null && (
+          <View pointerEvents="none" style={{ position: 'absolute', top: 76, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 6, backgroundColor: dStat === 'ok' ? '#3BB273' : colors.red }}>
+            <Text style={{ color: colors.paper, fontFamily: fonts.display, fontSize: 16, letterSpacing: 1 }}>
+              {Math.round(dist * 100)} CM · {dStat === 'ok' ? 'DISTANCIA CORRECTA' : dStat === 'cerca' ? 'ALÉJATE' : 'ACÉRCATE'}
+            </Text>
+          </View>
+        )}
 
         {/* Panel inferior */}
         <View style={{ backgroundColor: 'rgba(20,20,20,0.92)', borderTopWidth: 6, borderTopColor: colors.red, padding: space.md, gap: space.sm }}>
@@ -300,12 +333,48 @@ function ARMeasure({ purpose }: { purpose?: string }) {
             {mode === 'auto'
               ? <Button label={selPlane ? 'Reseleccionar' : 'Seleccionar'} icon="gesture-tap" style={{ flex: 1 }} onPress={selectTop} disabled={!reticle} />
               : <Button label={pts.length ? 'Marcar fin' : 'Marcar inicio'} icon="crosshairs-gps" style={{ flex: 1 }} onPress={placePoint} disabled={!reticle} />}
-            <Button label={ai.busy ? '…' : 'IA'} variant="outline" small onPress={identify} disabled={ai.busy} style={{ alignSelf: 'center' }} />
+            {ai.busy
+              ? <View accessibilityLabel="La IA está analizando" style={{ minWidth: 64, height: 44, borderWidth: 3, borderColor: colors.paper, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' }}><LoadingDots /></View>
+              : <Button label="IA" variant="outline" small onPress={identify} style={{ alignSelf: 'center' }} />}
             <Button label="↺" variant="outline" small onPress={() => { resetAll(); planes.current.clear(); setPlaneTick((n) => n + 1); setResetSignal((n) => n + 1); }} style={{ alignSelf: 'center' }} />
           </View>
           <Button label="Usar estas medidas" variant="ink" onPress={confirm} disabled={!done} />
           <Text style={{ color: colors.paper3, fontSize: 12, textAlign: 'center' }}>Las medidas son estimaciones: confírmalas antes de despachar.</Text>
         </View>
+      </SafeAreaView>
+      {showGuide && <MeasureGuide onClose={() => setShowGuide(false)} />}
+    </View>
+  );
+}
+
+const TIPS: { n: string; title: string; body: string }[] = [
+  { n: '1', title: `Distancia: ${Math.round(MIN_DISTANCE_M * 100)} a ${Math.round(MAX_DISTANCE_M * 100)} cm`, body: 'Ubica el teléfono a un brazo de distancia del producto. Arriba verás la distancia en vivo: en verde puedes medir.' },
+  { n: '2', title: 'Apunta en diagonal, desde arriba', body: 'Inclina el teléfono unos 45° mirando hacia el producto, de modo que veas su cara superior y uno de sus lados.' },
+  { n: '3', title: 'Detecta la superficie primero', body: 'Pon el producto sobre una mesa o el piso con textura (no vidrio ni superficies lisas y brillantes) y mueve el teléfono despacio unos segundos.' },
+  { n: '4', title: 'Buena luz y pulso firme', body: 'Mide con luz pareja, sin contraluz. Mantén el teléfono quieto al seleccionar o marcar puntos.' },
+];
+
+/** Guía inicial: desde qué distancia y cómo apuntar la cámara para medir mejor. */
+function MeasureGuide({ onClose }: { onClose: () => void }) {
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,20,20,0.94)' }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={{ padding: space.xl, gap: space.md }}>
+          <Text style={{ color: colors.paper3, fontFamily: fonts.displayMedium, letterSpacing: 2, fontSize: 14 }}>ANTES DE MEDIR</Text>
+          <Text style={{ color: colors.paper, fontFamily: fonts.display, fontSize: 34, lineHeight: 38, textTransform: 'uppercase' }}>Cómo apuntar la cámara</Text>
+          {TIPS.map((t) => (
+            <View key={t.n} style={{ flexDirection: 'row', gap: space.md, alignItems: 'flex-start' }}>
+              <View style={{ width: 36, height: 36, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: colors.paper, fontFamily: fonts.display, fontSize: 20 }}>{t.n}</Text>
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ color: colors.paper, fontFamily: fonts.display, fontSize: 18, textTransform: 'uppercase' }}>{t.title}</Text>
+                <Text style={{ color: colors.paper3, fontSize: 15, lineHeight: 21 }}>{t.body}</Text>
+              </View>
+            </View>
+          ))}
+          <Button label="Entendido, medir" icon="check" onPress={onClose} />
+        </ScrollView>
       </SafeAreaView>
     </View>
   );

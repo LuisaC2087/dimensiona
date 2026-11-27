@@ -3,7 +3,7 @@
  * Todo usa Animated (nativo y web) y respeta «Reducir movimiento» del sistema.
  */
 import { type ReactNode, useEffect, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, Platform, type StyleProp, type ViewStyle } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Platform, View, type StyleProp, type ViewStyle } from 'react-native';
 
 export const NATIVE = Platform.OS !== 'web';
 
@@ -111,4 +111,39 @@ export function useCountUp(text: string, duration = 900) {
   }, [text]);
   if (!animatable) return text;
   return shown ?? fmt(0);
+}
+
+/** Giro lento y continuo sobre su propio eje (círculo hueco de la portada). */
+export function Spin({ children, duration = 24000, style }: { children: ReactNode; duration?: number; style?: StyleProp<ViewStyle> }) {
+  const r = useAnimatedValue(0);
+  useEffect(() => {
+    if (reduced) { r.setValue(0); return; }
+    r.setValue(0);
+    const loop = Animated.loop(Animated.timing(r, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: NATIVE }));
+    loop.start();
+    return () => loop.stop();
+  }, [r, duration]);
+  return <Animated.View style={[style, { transform: [{ rotate: r.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]}>{children}</Animated.View>;
+}
+
+/** Tres puntos que saltan en secuencia: indica que algo está cargando (p. ej. la IA). */
+export function LoadingDots({ color = '#F8F4EC', size = 8 }: { color?: string; size?: number }) {
+  const t = useAnimatedValue(0);
+  useEffect(() => {
+    if (reduced) return;
+    t.setValue(0);
+    const loop = Animated.loop(Animated.timing(t, { toValue: 1, duration: 1100, easing: Easing.linear, useNativeDriver: NATIVE }));
+    loop.start();
+    return () => loop.stop();
+  }, [t]);
+  return (
+    <View accessibilityLabel="Cargando" style={{ flexDirection: 'row', gap: size * 0.6, alignItems: 'center', height: size * 3 }}>
+      {[0, 1, 2].map((i) => {
+        const a = i / 3;
+        const y = t.interpolate({ inputRange: [0, a, a + 0.15, a + 0.3, 1], outputRange: [0, 0, -size, 0, 0], extrapolate: 'clamp' });
+        const o = t.interpolate({ inputRange: [0, a, a + 0.15, a + 0.3, 1], outputRange: [0.4, 0.4, 1, 0.4, 0.4], extrapolate: 'clamp' });
+        return <Animated.View key={i} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity: o, transform: [{ translateY: y }] }} />;
+      })}
+    </View>
+  );
 }

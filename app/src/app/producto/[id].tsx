@@ -95,12 +95,12 @@ function ProductoForm() {
             {confidence != null && <Tag label={`Confiabilidad ${reliabilityLabel(confidence)}`} color={confidence >= 0.75 ? colors.ok : colors.warn} />}
           </Row>
           <Row style={{ alignItems: 'flex-start' }}>
-            <Field label="Largo cm" value={f.length} onChangeText={(v) => { set('length')(v); setMethod('manual'); }} keyboardType="decimal-pad" style={{ flex: 1 }} />
-            <Field label="Ancho cm" value={f.width} onChangeText={(v) => { set('width')(v); setMethod('manual'); }} keyboardType="decimal-pad" style={{ flex: 1 }} />
-            <Field label="Alto cm" value={f.height} onChangeText={(v) => { set('height')(v); setMethod('manual'); }} keyboardType="decimal-pad" style={{ flex: 1 }} />
+            <Field required label="Largo cm" value={f.length} onChangeText={(v) => { set('length')(v); setMethod('manual'); }} keyboardType="decimal-pad" style={{ flex: 1 }} />
+            <Field required label="Ancho cm" value={f.width} onChangeText={(v) => { set('width')(v); setMethod('manual'); }} keyboardType="decimal-pad" style={{ flex: 1 }} />
+            <Field required label="Alto cm" value={f.height} onChangeText={(v) => { set('height')(v); setMethod('manual'); }} keyboardType="decimal-pad" style={{ flex: 1 }} />
           </Row>
           <Row style={{ alignItems: 'flex-start' }}>
-            <Field label="Peso kg" value={f.weight} onChangeText={set('weight')} keyboardType="decimal-pad" style={{ flex: 1 }} hint="Usa una gramera: la cámara no pesa" />
+            <Field required label="Peso kg" value={f.weight} onChangeText={set('weight')} keyboardType="decimal-pad" style={{ flex: 1 }} hint="Usa una gramera: la cámara no pesa" />
             <Field label="Precio $" value={f.price} onChangeText={set('price')} keyboardType="number-pad" style={{ flex: 1 }} hint="Para el seguro" />
           </Row>
           {vol > 0 && (
@@ -112,7 +112,7 @@ function ProductoForm() {
           )}
 
           <SectionTitle>Datos</SectionTitle>
-          <Field label="Nombre" value={f.name} onChangeText={(v) => setF((x) => ({ ...x, name: v }))} placeholder="Vela aromática lavanda" />
+          <Field required label="Nombre" value={f.name} onChangeText={(v) => setF((x) => ({ ...x, name: v }))} placeholder="Vela aromática lavanda" />
           <Field label="SKU (opcional)" value={f.sku} onChangeText={(v) => setF((x) => ({ ...x, sku: v }))} autoCapitalize="characters" />
           <View style={{ gap: 6 }}>
             <Body style={{ fontWeight: '700' }}>Categoría</Body>

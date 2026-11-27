@@ -1,5 +1,6 @@
 import { router, type Href } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import type { Shipment } from '../../api/types';
 import { Icon, type IconName } from '../../components/Icon';
@@ -66,6 +67,8 @@ export default function TiendaInicio() {
   });
   const st = (data?.stats ?? {}) as Record<string, number>;
 
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  useEffect(() => { api.config().then((c) => setVideoUrl(c.videoUrl ?? null)).catch(() => {}); }, []);
   return (
     <Screen header={<Header title={store?.name ?? 'Mi tienda'} kicker={`Hola, ${user?.name.split(' ')[0] ?? ''}`} right={<Bell />} />} onRefresh={reload} refreshing={refreshing}>
       <Row wrap style={{ gap: space.sm }}>
@@ -73,14 +76,17 @@ export default function TiendaInicio() {
       </Row>
 
       {user?.email.endsWith('@demo.app') && (
-        <Card accent={colors.red} onPress={() => void tour.start('tienda')}>
+        <Card accent={colors.red}>
           <Row>
             <Pulse><View style={{ width: 48, height: 48, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' }}><Icon name="play" size={30} color={colors.paper} /></View></Pulse>
             <View style={{ flex: 1 }}>
               <Title size={20}>Ver la app en acción</Title>
-              <Body muted>Recorrido guiado: la app se maneja sola y te explica cada pantalla.</Body>
+              <Body muted>Elige cómo conocerla: un recorrido guiado o un video.</Body>
             </View>
           </Row>
+          <Button icon="gesture-tap" label="Demostración guiada" onPress={() => void tour.start('tienda')} />
+          <Button icon="youtube" variant="outline" label={videoUrl ? 'Ver video de la app' : 'Video de la app · próximamente'} disabled={!videoUrl}
+            onPress={() => { if (videoUrl) void Linking.openURL(videoUrl); }} />
         </Card>
       )}
 

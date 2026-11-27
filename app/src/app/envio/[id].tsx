@@ -49,7 +49,7 @@ export default function EnvioDetalleScreen() {
 }
 
 function EnvioDetalle() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, accion } = useLocalSearchParams<{ id: string; accion?: 'recoger' | 'entregar' | 'novedad' }>();
   const { user } = useAuth();
   const { data: s, error, loading, reload, refreshing } = useLoad(() => api.shipment(id), [id]);
   const [action, setAction] = useState<ShipmentStatus | null>(null);
@@ -62,6 +62,18 @@ function EnvioDetalle() {
   const [couriers, setCouriers] = useState<{ id: string; name: string; city: string }[] | null>(null);
   const [pickDay, setPickDay] = useState<string | null>(null);
   const [pickWin, setPickWin] = useState<'manana' | 'tarde'>('manana');
+
+  // Desde «Recoger y entregar» se abre el formulario de la acción pedida (una vez por estado).
+  const [autoKey, setAutoKey] = useState<string | null>(null);
+  if (s && accion && autoKey !== `${accion}:${s.status}`) {
+    setAutoKey(`${accion}:${s.status}`);
+    if (accion === 'recoger' && s.status === 'asignado') setAction('recogido');
+    else if (accion === 'entregar' && ['recogido', 'en_ruta', 'novedad'].includes(s.status)) setAction('entregado');
+    else if (accion === 'novedad' && ['recogido', 'en_ruta'].includes(s.status)) setAction('novedad');
+  }
+
+  /** El servidor exige pasar por «en ruta» antes de entregar o reportar novedad. */
+  const toRouteIfNeeded = async () => { if (s && (s.status === 'recogido' || s.status === 'novedad')) await api.setStatus(s.id, { status: 'en_ruta' }); };
 
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true); setErr(null);
@@ -174,33 +186,50 @@ function EnvioDetalle() {
         <Row>
           {NEXT[s.status]!.map((n) => (
             <Button key={n.status} label={n.label} style={{ flex: 1 }} variant={n.status === 'novedad' || n.status === 'devuelto' ? 'outline' : 'primary'}
-              onPress={() => (n.status === 'entregado' || n.status === 'novedad' ? setAction(n.status) : run(() => api.setStatus(s.id, { status: n.status })))} />
+              onPress={() => (n.status === 'entregado' || n.status === 'novedad' || n.status === 'recogido' ? setAction(n.status) : run(() => api.setStatus(s.id, { status: n.status })))} />
           ))}
         </Row>
+      )}
+      {action === 'recogido' && (
+        <Card accent={colors.ok}>
+          <Label>Registrar recogida</Label>
+          <Body muted>Verifica las medidas, toma una foto del paquete rotulado y confirma.</Body>
+          <Button small variant="outline" icon="ruler-square-compass" label="Verificar medidas con AR"
+            onPress={() => router.push({ pathname: '/medir', params: { purpose: `verify:${s.id}` } })} />
+          {photo ? <Image source={{ uri: photo }} style={{ width: '100%', height: 200 }} resizeMode="cover" /> : null}
+          <Button small variant="outline" icon="camera" label={photo ? 'Repetir foto' : 'Foto del paquete *'} onPress={takePhoto} />
+          {!photo && <Body style={{ fontSize: 13, color: colors.redDark }}>La foto del paquete es obligatoria.</Body>}
+          <Field label="Nota (opcional)" value={note} onChangeText={setNote} placeholder="Estado del empaque, bultos…" />
+          <Row>
+            <Button label="Confirmar recogida" style={{ flex: 1 }} loading={busy} disabled={!photo}
+              onPress={() => run(() => api.setStatus(s.id, { status: 'recogido', note: note || undefined, photo: photo ?? undefined }))} />
+            <Button small variant="ghost" label="Cancelar" onPress={() => setAction(null)} />
+          </Row>
+        </Card>
       )}
       {action === 'entregado' && (
         <Card accent={colors.ok}>
           <Label>Prueba de entrega</Label>
-          <Field label="¿Quién recibió?" value={receiver} onChangeText={setReceiver} placeholder="Nombre de quien recibe" />
+          <Field required label="¿Quién recibió?" value={receiver} onChangeText={setReceiver} placeholder="Nombre de quien recibe" />
           <Field label="Nota (opcional)" value={note} onChangeText={setNote} />
           {s.cod_amount > 0 && <Body style={{ fontWeight: '800', color: colors.redDark }}>Recuerda recaudar {money(s.cod_amount)}</Body>}
           {photo ? <Image source={{ uri: photo }} style={{ width: '100%', height: 200 }} resizeMode="cover" /> : null}
           <Button small variant="outline" label={photo ? 'Repetir foto' : 'Foto de evidencia'} onPress={takePhoto} />
           <Row>
             <Button label="Confirmar entrega" style={{ flex: 1 }} loading={busy} disabled={!receiver}
-              onPress={() => run(() => api.setStatus(s.id, { status: 'entregado', receiverName: receiver, note: note || undefined, photo: photo ?? undefined }))} />
+              onPress={() => run(async () => { await toRouteIfNeeded(); await api.setStatus(s.id, { status: 'entregado', receiverName: receiver, note: note || undefined, photo: photo ?? undefined }); })} />
             <Button small variant="ghost" label="Cancelar" onPress={() => setAction(null)} />
           </Row>
         </Card>
       )}
       {action === 'novedad' && (
         <Card accent={colors.warn}>
-          <Field label="¿Qué pasó?" value={note} onChangeText={setNote} placeholder="No había nadie / dirección errada…" multiline />
+          <Field required label="¿Qué pasó?" value={note} onChangeText={setNote} placeholder="No había nadie / dirección errada…" multiline />
           <Row wrap style={{ gap: space.sm }}>
             {['No había nadie', 'Dirección errada', 'Cliente rechazó', 'No contesta'].map((t) => <Button key={t} small variant="outline" label={t} onPress={() => setNote(t)} />)}
           </Row>
           <Row>
-            <Button label="Reportar novedad" style={{ flex: 1 }} loading={busy} disabled={!note} onPress={() => run(() => api.setStatus(s.id, { status: 'novedad', note }))} />
+            <Button label="Reportar novedad" style={{ flex: 1 }} loading={busy} disabled={!note} onPress={() => run(async () => { await toRouteIfNeeded(); await api.setStatus(s.id, { status: 'novedad', note }); })} />
             <Button small variant="ghost" label="Cancelar" onPress={() => setAction(null)} />
           </Row>
         </Card>

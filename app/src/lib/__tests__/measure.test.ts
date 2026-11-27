@@ -1,5 +1,5 @@
 import {
-  distance3, heightAboveSupport, iso, maxRelativeDiff, median, minAreaRect, normalizeDims, photoMeasureCm, reliability, reliabilityLabel, toCm,
+  distance3, distanceStatus, heightAboveSupport, MAX_DISTANCE_M, MIN_DISTANCE_M, iso, maxRelativeDiff, median, minAreaRect, normalizeDims, photoMeasureCm, reliability, reliabilityLabel, toCm,
 } from '../measure';
 import { cm, dims, eta, money, waNumber } from '../format';
 
@@ -85,5 +85,15 @@ describe('utilidades', () => {
     expect(eta(0)).toBe('Mismo día');
     expect(eta(3)).toBe('3 días hábiles');
     expect(waNumber('300 123 4567')).toBe('573001234567');
+  });
+});
+
+describe('distancia de medición', () => {
+  it('clasifica cerca, en rango y lejos', () => {
+    expect(distanceStatus(MIN_DISTANCE_M - 0.05)).toBe('cerca');
+    expect(distanceStatus(MIN_DISTANCE_M)).toBe('ok');
+    expect(distanceStatus(0.6)).toBe('ok');
+    expect(distanceStatus(MAX_DISTANCE_M)).toBe('ok');
+    expect(distanceStatus(MAX_DISTANCE_M + 0.1)).toBe('lejos');
   });
 });

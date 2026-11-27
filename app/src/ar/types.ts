@@ -22,6 +22,8 @@ export interface ProductOverlay {
   drop: { dy: number; label: string } | null;
 }
 export interface BoxGhost { lengthM: number; widthM: number; heightM: number; label: string }
+/** Producto estimado por la IA, dibujado en AR con su base en el punto apuntado al identificarlo. */
+export interface AiBox { base: Point3; lengthM: number; widthM: number; heightM: number; label: string }
 
 export interface ARDrawing {
   points: Point3[];
@@ -31,6 +33,7 @@ export interface ARDrawing {
   product?: ProductOverlay | null;
   ghost?: BoxGhost | null;
   surfaces?: { id: string; outline: Point2[] }[];
+  aiBox?: AiBox | null;
 }
 
 export interface ARHandle {

@@ -15,7 +15,7 @@ export default function Mas() {
       <SectionTitle icon="truck-check">Transportadoras</SectionTitle>
       {data?.carriers.filter((c) => c.id !== 'propia').map((c) => (
         <ListItem key={c.id} icon="truck-fast" title={c.name}
-          sub={c.mode === 'real' ? 'Conectada con credenciales del contrato' : 'Modo simulado: agrega las credenciales del contrato en Render para conectarla'}
+          sub={c.mode === 'real' ? 'Conectada con credenciales del contrato' : 'Modo simulado: agrega las credenciales del contrato en el servidor para conectarla'}
           right={<Tag label={c.mode === 'real' ? 'Conectada' : 'Simulada'} color={c.mode === 'real' ? colors.ok : colors.warn} />} />
       ))}
       <SectionTitle icon="bell">Avisos</SectionTitle>

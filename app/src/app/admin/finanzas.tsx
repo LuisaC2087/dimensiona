@@ -1,4 +1,4 @@
-/** Finanzas: facturación mensual a tiendas y liquidaciones (recaudos a tiendas, pagos a mensajeros). */
+/** Finanzas: cuentas de cobro por envío y liquidaciones (recaudos a tiendas, pagos a mensajeros). */
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { api } from '../../api/client';
@@ -44,11 +44,11 @@ export default function Finanzas() {
 
       {tab === 'facturas' ? (
         <>
-          <Tip id="admin-facturas" title="Cierre de mes" icon="calendar-check">
-            Genera las cuentas de cobro del periodo: se agrupan los envíos no facturados de cada tienda. Es un documento interno; la factura electrónica DIAN se emite con tu proveedor autorizado.
+          <Tip id="admin-facturas" title="Envíos sin cuenta de cobro" icon="calendar-check">
+            Cada envío genera su cuenta de cobro al crearse. Usa esto solo para recuperar envíos del periodo que quedaron sin cuenta (por ejemplo, tras anular una). Es un documento interno; la factura electrónica DIAN se emite con tu proveedor autorizado.
           </Tip>
           <Row style={{ alignItems: 'flex-end' }}>
-            <Field label="Periodo (AAAA-MM)" value={period} onChangeText={setPeriod} style={{ flex: 1 }} autoCapitalize="none" />
+            <Field required label="Periodo (AAAA-MM)" value={period} onChangeText={setPeriod} style={{ flex: 1 }} autoCapitalize="none" />
             <Button label="Facturar" icon="file-document-multiple" loading={busy}
               onPress={() => run(async () => { const r = await api.adminRunBilling(period); setMsg(r.invoices.length ? `${r.invoices.length} facturas generadas` : 'No había envíos por facturar en ese periodo'); })} />
           </Row>

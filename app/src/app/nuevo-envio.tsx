@@ -123,14 +123,14 @@ function NuevoEnvio() {
       {step === 2 && (
         <>
           <SectionTitle icon="account">¿Para quién?</SectionTitle>
-          <Field label="Nombre del cliente" value={to.recipientName} onChangeText={(v) => setTo((t) => ({ ...t, recipientName: v }))} autoComplete="name" />
-          <Field label="Celular / WhatsApp" value={to.recipientPhone} onChangeText={(v) => setTo((t) => ({ ...t, recipientPhone: v }))} keyboardType="phone-pad" />
+          <Field required label="Nombre del cliente" value={to.recipientName} onChangeText={(v) => setTo((t) => ({ ...t, recipientName: v }))} autoComplete="name" />
+          <Field required label="Celular / WhatsApp" value={to.recipientPhone} onChangeText={(v) => setTo((t) => ({ ...t, recipientPhone: v }))} keyboardType="phone-pad" />
           <Field label="Correo (opcional)" value={to.recipientEmail} onChangeText={(v) => setTo((t) => ({ ...t, recipientEmail: v }))} keyboardType="email-address" autoCapitalize="none" autoComplete="email" hint="Le avisamos el estado de su pedido por WhatsApp y, si lo escribes, por correo" />
-          <Field label="Dirección" value={to.address} onChangeText={(v) => setTo((t) => ({ ...t, address: v }))} placeholder="Cl 72 #10-34 Apto 501" />
-          <Field label="Ciudad" value={to.city} onChangeText={(v) => setTo((t) => ({ ...t, city: v }))} placeholder="Medellín" hint={`Origen: ${store?.city ?? '—'}`} />
+          <Field required label="Dirección" value={to.address} onChangeText={(v) => setTo((t) => ({ ...t, address: v }))} placeholder="Cl 72 #10-34 Apto 501" />
+          <Field required label="Ciudad" value={to.city} onChangeText={(v) => setTo((t) => ({ ...t, city: v }))} placeholder="Medellín" hint={`Origen: ${store?.city ?? '—'}`} />
           <Field label="Indicaciones (opcional)" value={to.notes} onChangeText={(v) => setTo((t) => ({ ...t, notes: v }))} placeholder="Portería, horario, referencia…" multiline />
           <Toggle label="Pago contra entrega" hint="El mensajero recauda el valor al entregar" value={cod} onChange={(v) => { setCod(v); if (v && !codAmount && goodsValue) setCodAmount(String(goodsValue)); }} />
-          {cod && <Field label="Valor a recaudar $" value={codAmount} onChangeText={setCodAmount} keyboardType="number-pad" />}
+          {cod && <Field required label="Valor a recaudar $" value={codAmount} onChangeText={setCodAmount} keyboardType="number-pad" />}
           <Button label="Calcular caja y tarifa" onPress={() => loadQuote()} loading={busy} disabled={!step2ok} />
         </>
       )}

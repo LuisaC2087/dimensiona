@@ -44,17 +44,17 @@ export default function Pqr() {
             Puedes presentar peticiones, quejas, reclamos (p. ej. por pérdida o daño de un envío) o sugerencias. La ley nos da 15 días hábiles para responder; si no estás de acuerdo puedes acudir a la Superintendencia de Industria y Comercio.
           </Tip>
           <Segmented value={type} onChange={setType} options={(Object.keys(CLAIM_LABEL) as T[]).map((k) => ({ value: k, label: CLAIM_LABEL[k] }))} />
-          {!user && <Field label="Tu nombre" value={f.name} onChangeText={set('name')} />}
-          {!user && <Field label="Correo o celular" value={f.contact} onChangeText={set('contact')} autoCapitalize="none" />}
-          <Field label={user ? 'Guía relacionada (opcional)' : 'Código de tu guía'} value={f.code} onChangeText={set('code')} autoCapitalize="characters" placeholder="DM1234ABC" />
-          <Field label="Cuéntanos qué pasó" value={f.message} onChangeText={set('message')} multiline placeholder="Describe los hechos y lo que solicitas" />
+          {!user && <Field required label="Tu nombre" value={f.name} onChangeText={set('name')} />}
+          {!user && <Field required label="Correo o celular" value={f.contact} onChangeText={set('contact')} autoCapitalize="none" />}
+          <Field required={!user} label={user ? 'Guía relacionada (opcional)' : 'Código de tu guía'} value={f.code} onChangeText={set('code')} autoCapitalize="characters" placeholder="DM1234ABC" />
+          <Field required label="Cuéntanos qué pasó" value={f.message} onChangeText={set('message')} multiline placeholder="Describe los hechos y lo que solicitas" />
           <ErrorBox message={error} />
           <Button label="Radicar" icon="send" loading={busy} onPress={submit} disabled={f.message.trim().length < 10 || (!user && (!f.code || !f.name || !f.contact))} />
         </>
       )}
 
       <SectionTitle icon="magnify">Consultar un radicado</SectionTitle>
-      <Field label="Número de radicado" value={lookup} onChangeText={setLookup} autoCapitalize="characters" placeholder="PQR-2026-00001" />
+      <Field required label="Número de radicado" value={lookup} onChangeText={setLookup} autoCapitalize="characters" placeholder="PQR-2026-00001" />
       <Button variant="outline" icon="magnify" label="Consultar" disabled={!lookup} onPress={async () => { setError(null); try { setFound(await api.claimStatus(lookup.trim())); } catch (e: any) { setError(e.message); setFound(null); } }} />
       {found && (
         <Card accent={found.status === 'cerrada' ? colors.ok : colors.warn}>
