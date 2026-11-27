@@ -44,16 +44,30 @@ export async function seed() {
     }
   }
 
-  // Transportadoras aliadas (tarifas de referencia: actualízalas con las de tu contrato).
+  // Transportadoras aliadas.
+  // Coordinadora: tarifa pública de «Documentos y Paquetes hasta 5 kilos» (coordinadora.com/envios/tarifas-e-informacion-general):
+  //   1–2 kg: local $9.000 · regional $10.450 · nacional $17.830; 5 kg: $16.230 · $19.610 · $29.270.
+  //   Peso volumétrico L×A×H ÷ 2.500; costo de manejo 1 % del valor declarado. Se cargan como rangos (bands);
+  //   sobre 5 kg se suma por kilo el promedio del paso de 3 a 5 kg (≈ el kilo adicional de la tabla). Servientrega no publica tabla al detal: factor 222 kg/m³
+  //   (ficha «Mercancía Premier», ≈ ÷ 4.505) y tarifa de referencia que se debe ajustar al contrato.
   const CARRIER_SERVICES = [
-    { carrier: 'servientrega', name: 'Servientrega · Mercancía', description: 'Tarifa de referencia. Actualízala con tu contrato Servientrega.', courier: 0,
+    { carrier: 'servientrega', name: 'Servientrega · Mercancía', description: 'Tarifa de referencia: ajústala a tu contrato Servientrega.', courier: 0, divisor: 4505, insurancePct: 1, minInsurance: 500,
       rates: { local: { base: 9800, perKg: 1700, etaDays: 1 }, regional: { base: 12400, perKg: 2100, etaDays: 2 }, nacional: { base: 15900, perKg: 2900, etaDays: 3 } } },
-    { carrier: 'coordinadora', name: 'Coordinadora · Paquetería', description: 'Tarifa de referencia. Actualízala con tu contrato Coordinadora.', courier: 0,
-      rates: { local: { base: 9500, perKg: 1600, etaDays: 1 }, regional: { base: 12100, perKg: 2000, etaDays: 2 }, nacional: { base: 15400, perKg: 3000, etaDays: 3 } } },
+    { carrier: 'coordinadora', name: 'Coordinadora · Paquetería', description: 'Tarifa pública de Coordinadora (paquetes hasta 5 kg).', courier: 0, divisor: 2500, insurancePct: 1, minInsurance: 0,
+      rates: {
+        local: { base: 9000, perKg: 3410, etaDays: 1, bands: [[2, 9000], [3, 12820], [5, 16230]] },
+        regional: { base: 10450, perKg: 3540, etaDays: 2, bands: [[2, 10450], [3, 16070], [5, 19610]] },
+        nacional: { base: 17830, perKg: 3850, etaDays: 3, bands: [[2, 17830], [3, 25420], [5, 29270]] },
+      } },
   ];
   for (const s of CARRIER_SERVICES) {
-    if (await one('SELECT 1 FROM services WHERE carrier = $1', [s.carrier])) continue;
-    await query('INSERT INTO services (name, description, courier_share_pct, rates, carrier) VALUES ($1,$2,$3,$4,$5)', [s.name, s.description, s.courier, JSON.stringify(s.rates), s.carrier]);
+    const args = [s.name, s.description, s.courier, JSON.stringify(s.rates), s.carrier, s.divisor, s.insurancePct, s.minInsurance];
+    if (!(await one('SELECT 1 FROM services WHERE carrier = $1', [s.carrier]))) {
+      await query('INSERT INTO services (name, description, courier_share_pct, rates, carrier, divisor, insurance_pct, min_insurance) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', args);
+    } else {
+      // Actualiza solo las tarifas de referencia que nadie ha editado desde el panel.
+      await query("UPDATE services SET name=$1, description=$2, courier_share_pct=$3, rates=$4, divisor=$6, insurance_pct=$7, min_insurance=$8 WHERE carrier=$5 AND description LIKE 'Tarifa de referencia. Actualízala%'", args);
+    }
   }
 
   // Administrador: contraseña de ADMIN_PASSWORD; si falta, se genera y se muestra una sola vez en el log.

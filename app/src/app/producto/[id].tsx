@@ -107,7 +107,7 @@ function ProductoForm() {
             <Card style={{ backgroundColor: colors.ink }} shadow={colors.red}>
               <Text style={{ color: colors.paper3, fontFamily: fonts.displayMedium, letterSpacing: 1 }}>PESO VOLUMÉTRICO DEL PRODUCTO</Text>
               <Text style={{ color: colors.paper, fontFamily: fonts.display, fontSize: 28 }}>{volKg.toFixed(2).replace('.', ',')} kg</Text>
-              <Text style={{ color: colors.paper3, fontSize: 13 }}>Las transportadoras cobran el mayor entre peso real y volumétrico (L×A×H ÷ 5000).</Text>
+              <Text style={{ color: colors.paper3, fontSize: 13 }}>Las transportadoras cobran el mayor entre peso real y volumétrico (L×A×H ÷ divisor: 5.000 de referencia; Coordinadora usa 2.500).</Text>
             </Card>
           )}
 

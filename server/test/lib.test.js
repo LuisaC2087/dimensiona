@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { orientations, packUnits, recommendPacking, expandUnits, boundingDims } from '../src/lib/packing.js';
-import { chargeableKg, volumetricKg, priceService, quoteAll } from '../src/lib/pricing.js';
+import { chargeableKg, volumetricKg, priceService, quoteAll, freightFor } from '../src/lib/pricing.js';
 import { zoneFor, normCity } from '../src/lib/geo.js';
 
 const BOXES = [
@@ -98,4 +98,14 @@ test('zonas en Colombia', () => {
   assert.equal(zoneFor('Medellín', 'Envigado'), 'regional');
   assert.equal(zoneFor('Bogotá', 'Cali'), 'nacional');
   assert.equal(zoneFor('Bogotá', 'Pueblo Desconocido'), 'nacional');
+});
+
+test('freightFor: tabla por rangos de Coordinadora y kilo adicional sobre el último rango', () => {
+  const nacional = { base: 17830, perKg: 3850, bands: [[2, 17830], [3, 25420], [5, 29270]] };
+  assert.equal(freightFor(nacional, 1), 17830);
+  assert.equal(freightFor(nacional, 2), 17830);
+  assert.equal(freightFor(nacional, 3), 25420);
+  assert.equal(freightFor(nacional, 4), 29270);
+  assert.equal(freightFor(nacional, 7), 29270 + 2 * 3850);
+  assert.equal(freightFor({ base: 9000, perKg: 1500 }, 3), 12000);
 });

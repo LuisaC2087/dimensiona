@@ -18,6 +18,21 @@ export function chargeableKg(realKg, dims, divisor = DEFAULT_DIVISOR) {
 const roundCop = (n) => Math.round(n / 50) * 50;
 
 /**
+ * Flete de un paquete. Con `bands` ([[hastaKg, precio], …] ascendente) usa la tabla por rangos de la
+ * transportadora; por encima del último rango suma `perKg` por kilo. Sin `bands`: base + perKg por kilo adicional.
+ */
+export function freightFor(rate, kg) {
+  const bands = Array.isArray(rate.bands) ? rate.bands : null;
+  if (bands?.length) {
+    const hit = bands.find(([upTo]) => kg <= upTo);
+    if (hit) return hit[1];
+    const [lastKg, lastPrice] = bands[bands.length - 1];
+    return lastPrice + (rate.perKg || 0) * (kg - lastKg);
+  }
+  return rate.base + rate.perKg * Math.max(0, kg - 1);
+}
+
+/**
  * Precio de un servicio para un conjunto de paquetes.
  * @param service { id, name, divisor, insurancePct, minInsurance, codPct, rates: { local|regional|nacional: { base, perKg, etaDays } } }
  * @param packages [{ dims:[l,w,h], weightKg }]
@@ -33,7 +48,7 @@ export function priceService(service, packages, { zone, declaredValue = 0, codAm
   for (const p of packages) {
     const vol = volumetricKg(p.dims, divisor);
     const ch = chargeableKg(p.weightKg, p.dims, divisor);
-    freight += rate.base + rate.perKg * Math.max(0, ch - 1);
+    freight += freightFor(rate, ch);
     totalCharge += ch;
     totalVol += vol;
     totalReal += Number(p.weightKg) || 0;
