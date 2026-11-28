@@ -142,7 +142,7 @@ function AiProductBox({ o, ghost }: { o: AiBox; ghost: BoxGhost | null }) {
   return (
     <>
       {box(o.lengthM, o.widthM, o.heightM).map((pts, i) => <ViroPolyline key={'a' + i} points={pts} thickness={0.005} materials={['dmLine']} />)}
-      <Pill at={[o.base.x, o.base.y + o.heightM + 0.04, o.base.z]} text={o.label} ink />
+      <Pill at={[o.base.x, o.base.y + o.heightM + 0.025, o.base.z]} text={o.label} ink />
       {ghost && box(ghost.lengthM, ghost.widthM, ghost.heightM).map((pts, i) => <ViroPolyline key={'ag' + i} points={pts} thickness={0.006} materials={['dmRed']} />)}
       {ghost && <Pill at={[o.base.x, o.base.y + ghost.heightM + 0.1, o.base.z]} text={ghost.label} />}
     </>

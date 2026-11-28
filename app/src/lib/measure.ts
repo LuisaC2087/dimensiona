@@ -129,3 +129,26 @@ const C30 = Math.cos(Math.PI / 6), S30 = Math.sin(Math.PI / 6);
 export function iso(p: { x: number; y: number; z: number }): { u: number; v: number } {
   return { u: (p.x - p.y) * C30, v: (p.x + p.y) * S30 - p.z };
 }
+
+/**
+ * Base (centro de la cara inferior) de la caja estimada por la IA. La retícula suele tocar el frente del
+ * producto a media altura: la caja se corre media profundidad lejos de la cámara y se apoya en el plano
+ * horizontal de soporte que haya debajo. Sin soporte, se centra en altura sobre el punto tocado.
+ */
+export function aiBoxBase(
+  hit: { x: number; y: number; z: number },
+  camera: { x: number; y: number; z: number },
+  planes: HPlane[],
+  dims: { widthM: number; heightM: number },
+): { x: number; y: number; z: number } {
+  const dx = hit.x - camera.x, dz = hit.z - camera.z;
+  const d = Math.hypot(dx, dz) || 1;
+  const x = hit.x + (dx / d) * (dims.widthM / 2), z = hit.z + (dz / d) * (dims.widthM / 2);
+  let support: number | null = null;
+  for (const p of planes) {
+    if (p.y > hit.y + 0.01) continue;
+    if (Math.hypot(x - p.cx, z - p.cz) > Math.hypot(p.lengthM, p.widthM) / 2 + 0.15 && p.lengthM < 3) continue;
+    if (support == null || p.y > support) support = p.y;
+  }
+  return { x, y: support ?? hit.y - dims.heightM / 2, z };
+}

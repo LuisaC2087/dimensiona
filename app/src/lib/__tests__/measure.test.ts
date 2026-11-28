@@ -1,5 +1,5 @@
 import {
-  distance3, distanceStatus, heightAboveSupport, MAX_DISTANCE_M, MIN_DISTANCE_M, iso, maxRelativeDiff, median, minAreaRect, normalizeDims, photoMeasureCm, reliability, reliabilityLabel, toCm,
+  aiBoxBase, distance3, distanceStatus, heightAboveSupport, MAX_DISTANCE_M, MIN_DISTANCE_M, iso, maxRelativeDiff, median, minAreaRect, normalizeDims, photoMeasureCm, reliability, reliabilityLabel, toCm,
 } from '../measure';
 import { cm, dims, eta, money, waNumber } from '../format';
 
@@ -95,5 +95,18 @@ describe('distancia de medición', () => {
     expect(distanceStatus(0.6)).toBe('ok');
     expect(distanceStatus(MAX_DISTANCE_M)).toBe('ok');
     expect(distanceStatus(MAX_DISTANCE_M + 0.1)).toBe('lejos');
+  });
+});
+
+describe('aiBoxBase', () => {
+  const table = { id: 't', y: 0.75, cx: 0, cz: -0.5, lengthM: 1.2, widthM: 0.6 };
+  it('apoya la caja en la mesa y la corre media profundidad lejos de la cámara', () => {
+    const b = aiBoxBase({ x: 0, y: 0.88, z: -0.5 }, { x: 0, y: 1.2, z: 0 }, [table], { widthM: 0.08, heightM: 0.25 });
+    expect(b.y).toBeCloseTo(0.75);
+    expect(b.z).toBeCloseTo(-0.54);
+  });
+  it('sin superficie de apoyo centra la caja en el punto tocado', () => {
+    const b = aiBoxBase({ x: 0, y: 0.88, z: -0.5 }, { x: 0, y: 1.2, z: 0 }, [], { widthM: 0.08, heightM: 0.2 });
+    expect(b.y).toBeCloseTo(0.78);
   });
 });

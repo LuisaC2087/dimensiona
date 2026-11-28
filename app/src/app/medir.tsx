@@ -22,7 +22,7 @@ import { LoadingDots } from '../components/motion';
 import { toJpegBase64 } from '../lib/image';
 import { ensureAiConsent } from '../lib/consent';
 import {
-  distance3, distanceStatus, heightAboveSupport, MAX_DISTANCE_M, MIN_DISTANCE_M, MIN_SEPARATION_M, normalizeDims, reliability, reliabilityLabel, toCm,
+  aiBoxBase, distance3, distanceStatus, heightAboveSupport, MAX_DISTANCE_M, MIN_DISTANCE_M, MIN_SEPARATION_M, normalizeDims, reliability, reliabilityLabel, toCm,
   type Dim, type HPlane, type Point3, type TrackingState,
 } from '../lib/measure';
 import { measureBus } from '../state/measureBus';
@@ -90,7 +90,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   const [ghost, setGhost] = useState<(BoxGhost & { fill: number; name: string }) | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
   const [showGuide, setShowGuide] = useState(true);
-  const [aiBase, setAiBase] = useState<Point3 | null>(null);
+  const [aiBase, setAiBase] = useState<ReticleHit | null>(null);
   const handle = useRef<ARHandle | null>(null);
   const lastUi = useRef(0);
 
@@ -121,11 +121,9 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   const dist = reticle?.cameraDistanceM ?? null;
   const dStat = dist == null ? null : distanceStatus(dist);
   const RANGE = `${Math.round(MIN_DISTANCE_M * 100)} y ${Math.round(MAX_DISTANCE_M * 100)} cm`;
-  const outOfRange = () => {
-    if (dStat === 'cerca') { setMessage(`Muy cerca: aléjate hasta quedar entre ${RANGE} del producto.`); return true; }
-    if (dStat === 'lejos') { setMessage(`Muy lejos: acércate hasta quedar entre ${RANGE} del producto.`); return true; }
-    return false;
-  };
+  // El aviso de distancia se muestra en vivo (hint), no como mensaje fijo: así desaparece en cuanto
+  // la distancia vuelve a estar en rango y no contradice al indicador de arriba.
+  const outOfRange = () => dStat === 'cerca' || dStat === 'lejos';
 
   // Caja recomendada (servicio de embalaje) para dibujarla en AR.
   useEffect(() => {
@@ -160,7 +158,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
     const surfaces = [...planes.current.values()].filter((p) => p.id !== selId).map((p) => ({ id: p.id, outline: p.outline }));
     const est = ai.chosen?.estimado;
     const aiBox = !product && aiBase && est?.largo && est.ancho && est.alto
-      ? { base: aiBase, lengthM: est.largo / 100, widthM: est.ancho / 100, heightM: est.alto / 100, label: `IA ${fmt(est.largo)}×${fmt(est.ancho)}×${fmt(est.alto)} CM` }
+      ? { base: aiBoxBase(aiBase.position, aiBase.cameraPosition, hPlanes, { widthM: est.ancho / 100, heightM: est.alto / 100 }), lengthM: est.largo / 100, widthM: est.ancho / 100, heightM: est.alto / 100, label: `IA ${fmt(est.largo)}×${fmt(est.ancho)}×${fmt(est.alto)} CM` }
       : null;
     return { points: pts, segments, labels, draft, product, ghost, surfaces, aiBox };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -213,7 +211,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
     if (!(await ensureAiConsent())) return;
     setAi((a) => ({ ...a, busy: true, error: null }));
     try {
-      setAiBase(reticle?.position ?? null);
+      setAiBase(reticle ?? null);
       const uri = await handle.current?.capture();
       if (!uri) throw new Error('No se pudo tomar la imagen de la cámara.');
       const b64 = await toJpegBase64(uri);
@@ -246,7 +244,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   const conf = scores.length ? Math.min(...scores) : null;
   const hint = message
     ?? (ai.busy ? 'La IA está analizando la imagen…' : null)
-    ?? (dStat === 'cerca' ? `Muy cerca: aléjate (entre ${RANGE})` : dStat === 'lejos' ? `Muy lejos: acércate (entre ${RANGE})` : null)
+    ?? (dStat === 'cerca' ? `Muy cerca: aléjate (entre ${RANGE})` : dStat === 'lejos' ? `Muy lejos (${Math.round((dist ?? 0) * 100)} cm): acércate. Si el producto es alto o delgado, apunta a la mesa junto a su base.` : null)
     ?? (tracking !== 'good' && CAUSE[cause] ? CAUSE[cause]
       : mode === 'auto'
         ? (selPlane ? (done ? 'Listo. Revisa la caja roja sugerida y confirma.' : 'Midiendo… mantén el teléfono quieto') : planes.current.size ? 'Apunta la retícula a la cara superior del producto y toca SELECCIONAR' : 'Mueve el teléfono despacio sobre la mesa para detectar superficies')
@@ -290,7 +288,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
 
         {/* Panel inferior */}
         <View style={{ backgroundColor: 'rgba(20,20,20,0.92)', borderTopWidth: 6, borderTopColor: colors.red, padding: space.md, gap: space.sm }}>
-          <Text style={{ color: message ? '#FFB4AE' : colors.paper, fontSize: 15 }} numberOfLines={2}>{hint}</Text>
+          <Text style={{ color: message || (dStat && dStat !== 'ok') ? '#FFB4AE' : colors.paper, fontSize: 15 }} numberOfLines={2}>{hint}</Text>
 
           <View style={{ flexDirection: 'row', gap: space.sm }}>
             {DIMS.map((d) => {
