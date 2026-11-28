@@ -30,7 +30,7 @@ import {
 import { measureBus } from '../state/measureBus';
 import { colors, fonts, space } from '../theme';
 
-type Mode = 'auto' | 'puntos';
+type Mode = 'ia' | 'auto' | 'puntos';
 const DIM_LABEL: Record<Dim, string> = { length: 'Largo', width: 'Ancho', height: 'Alto' };
 const DIMS: Dim[] = ['length', 'width', 'height'];
 const TRACK_COLOR: Record<TrackingState, string> = { good: '#3BB273', limited: '#E0A100', lost: colors.red };
@@ -75,7 +75,7 @@ function Medir() {
 }
 
 function ARMeasure({ purpose }: { purpose?: string }) {
-  const [mode, setMode] = useState<Mode>('auto');
+  const [mode, setMode] = useState<Mode>('ia');
   const [tracking, setTracking] = useState<TrackingState>('limited');
   const [cause, setCause] = useState('none');
   const [reticle, setReticle] = useState<ReticleHit | null>(null);
@@ -97,10 +97,12 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   const viewSize = useRef({ w: 0, h: 0 });
   const handle = useRef<ARHandle | null>(null);
   const lastUi = useRef(0);
+  const latest = useRef<ReticleHit | null>(null);
 
   const callbacks: ARCallbacks = useMemo(() => ({
     onTracking: (s, c) => { setTracking(s); setCause(c); },
     onReticle: (hit) => {
+      latest.current = hit;
       const t = Date.now();
       if (t - lastUi.current >= 90) { lastUi.current = t; setReticle(hit); }
     },
@@ -215,6 +217,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
 
   const identify = async () => {
     if (!(await ensureAiConsent())) return;
+    setMessage(null);
     setAi((a) => ({ ...a, busy: true, error: null }));
     try {
       const hitAtCapture = reticle;
@@ -238,32 +241,66 @@ function ARMeasure({ purpose }: { purpose?: string }) {
    */
   const measureWithBox = async (obj: VisionObject, hit: ReticleHit | null) => {
     const h = handle.current, { w, h: H } = viewSize.current;
-    if (!h || !hit || !w || !H) return;
-    let k = 1, bestErr = Infinity;
-    for (const s of [1, PixelRatio.get()]) {
-      const c = await h.hitTest((w / 2) * s, (H / 2) * s);
-      const err = c ? distance3(c, hit.position) : Infinity;
-      if (err < bestErr) { bestErr = err; k = s; }
+    const fail = (m: string) => { setMessage(m); return false; };
+    if (!h || !hit || !w || !H) return fail('Apunta la retícula a la mesa, junto a la base del producto, y vuelve a intentar.');
+    // 1. El recuadro es de la foto tomada al tocar: si el teléfono se movió mientras la IA analizaba, ya no coincide.
+    const now = latest.current;
+    if (!now || distance3(now.cameraPosition, hit.cameraPosition) > 0.03 || distance3(now.position, hit.position) > 0.04) {
+      return fail('Te moviste mientras la IA analizaba. Vuelve a intentar sin mover el teléfono hasta ver la medida.');
     }
-    const b = obj.caja, px = (fx: number, fy: number) => [fx * w * k, fy * H * k] as const;
-    const base = await h.hitTest(...px(b.x + b.ancho / 2, Math.min(1, b.y + b.alto + 0.01)));
-    if (!base || distanceStatus(distance3(base, hit.cameraPosition)) !== 'ok') return;
-    const [top, left, right] = await Promise.all([
-      h.screenRay(...px(b.x + b.ancho / 2, b.y)),
-      h.screenRay(...px(b.x, b.y + b.alto * 0.97)),
-      h.screenRay(...px(b.x + b.ancho, b.y + b.alto * 0.97)),
-    ]);
-    if (!top || !left || !right) return;
-    const m = measureFromBox(hit.cameraPosition, base, { top, left, right });
-    if (!m) return;
-    const widthCm = toCm(m.widthM)!, heightCm = toCm(m.heightM)!;
+    const b = obj.caja;
+    if (b.y < 0.02 || b.y + b.alto > 0.98 || b.x < 0.01 || b.x + b.ancho > 0.99) {
+      return fail('El producto no cabe completo en la pantalla: aléjate un poco para verlo entero, con la mesa debajo.');
+    }
+    // 2. Unidades de pantalla (dp o píxeles): la escala cuyo centro coincide con la retícula.
+    let k = 1, bestErr = Infinity;
+    for (const sc of [1, PixelRatio.get()]) {
+      const c = await h.hitTest((w / 2) * sc, (H / 2) * sc);
+      const err = c ? distance3(c, hit.position) : Infinity;
+      if (err < bestErr) { bestErr = err; k = sc; }
+    }
+    const px = (fx: number, fy: number) => [fx * w * k, fy * H * k] as const;
+    // 3. Varias lecturas seguidas y la mediana: reduce el temblor de ARCore.
+    const heights: number[] = [], widths: number[] = [];
+    let base: Point3 | null = null;
+    for (let i = 0; i < 6; i++) {
+      const bHit = await h.hitTest(...px(b.x + b.ancho / 2, Math.min(0.995, b.y + b.alto + 0.012)));
+      if (bHit) {
+        // la base se apoya exactamente en el plano de la mesa detectado debajo, si lo hay
+        const sup = hPlanes.filter((pl) => pl.y <= bHit.y + 0.03 && pl.y >= bHit.y - 0.06 && Math.hypot(bHit.x - pl.cx, bHit.z - pl.cz) < Math.hypot(pl.lengthM, pl.widthM) / 2 + 0.1)
+          .sort((p1, p2) => Math.abs(p1.y - bHit.y) - Math.abs(p2.y - bHit.y))[0];
+        const bb = sup ? { ...bHit, y: sup.y } : bHit;
+        const [top, left, right] = await Promise.all([
+          h.screenRay(...px(b.x + b.ancho / 2, b.y)),
+          h.screenRay(...px(b.x, b.y + b.alto * 0.97)),
+          h.screenRay(...px(b.x + b.ancho, b.y + b.alto * 0.97)),
+        ]);
+        const m = top && left && right ? measureFromBox(hit.cameraPosition, bb, { top, left, right }) : null;
+        if (m) { heights.push(m.heightM); widths.push(m.widthM); base = bb; }
+      }
+      await new Promise((r) => setTimeout(r, 70));
+    }
+    if (!base || heights.length < 3) {
+      return fail('No ubiqué la mesa en la base del producto. Mueve el teléfono despacio sobre la mesa hasta ver sus líneas y vuelve a intentar.');
+    }
+    if (distanceStatus(distance3(base, hit.cameraPosition)) !== 'ok') {
+      return fail(`Ponte entre ${RANGE} del producto y vuelve a intentar.`);
+    }
+    const med = (a: number[]) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
+    const hM = med(heights), wM = med(widths);
+    const spread = Math.max(...heights) - Math.min(...heights);
+    const widthCm = toCm(wM)!, heightCm = toCm(hM)!;
     const depthCm = depthFromAi(widthCm, obj.estimado) ?? widthCm;
     const dx = base.x - hit.cameraPosition.x, dz = base.z - hit.cameraPosition.z, dl = Math.hypot(dx, dz) || 1;
     const back = depthCm / 200; // media profundidad, en metros
     setGeo({ base: { x: base.x + (dx / dl) * back, y: base.y, z: base.z + (dz / dl) * back }, lengthM: depthCm / 100, widthM: widthCm / 100, heightM: heightCm / 100 });
     setValues({ length: Math.max(widthCm, depthCm), width: Math.min(widthCm, depthCm), height: heightCm });
-    setScores([reliability(tracking, 'plane', distance3(base, hit.cameraPosition)) * 0.85]);
-    setMessage(`Medido con IA + AR: alto ${fmt(heightCm)} cm y ancho ${fmt(widthCm)} cm. Revisa y confirma.`);
+    const steady = spread < Math.max(0.01, hM * 0.08);
+    setScores([reliability(tracking, 'plane', distance3(base, hit.cameraPosition)) * (steady ? 0.9 : 0.6)]);
+    setMessage(steady
+      ? `Medido con IA + AR: alto ${fmt(heightCm)} cm y ancho ${fmt(widthCm)} cm. Revisa y confirma.`
+      : `Medida inestable (alto ${fmt(heightCm)} cm): repite con el teléfono quieto y más luz.`);
+    return true;
   };
 
   const applyAiEstimate = () => {
@@ -290,7 +327,9 @@ function ARMeasure({ purpose }: { purpose?: string }) {
     ?? (ai.busy ? 'La IA está analizando la imagen…' : null)
     ?? (dStat === 'cerca' ? `Muy cerca: aléjate (entre ${RANGE})` : dStat === 'lejos' ? `Muy lejos (${Math.round((dist ?? 0) * 100)} cm): acércate. Si el producto es alto o delgado, apunta a la mesa junto a su base.` : null)
     ?? (tracking !== 'good' && CAUSE[cause] ? CAUSE[cause]
-      : mode === 'auto'
+      : mode === 'ia'
+        ? (planes.current.size ? 'Pon el producto entero en pantalla, apunta la retícula a la mesa junto a su base y toca MEDIR CON IA. No muevas el teléfono hasta ver la medida.' : 'Mueve el teléfono despacio sobre la mesa hasta ver sus líneas')
+        : mode === 'auto'
         ? (selPlane ? (done ? 'Listo. Revisa la caja roja sugerida y confirma.' : 'Midiendo… mantén el teléfono quieto') : planes.current.size ? 'Apunta la retícula a la cara superior del producto y toca SELECCIONAR' : 'Mueve el teléfono despacio sobre la mesa para detectar superficies')
         : `${DIM_LABEL[active]}: ${pts.length === 0 ? 'apunta al primer extremo y marca' : 'apunta al otro extremo y marca'}`);
 
@@ -307,10 +346,10 @@ function ARMeasure({ purpose }: { purpose?: string }) {
             <Text style={{ color: colors.paper, fontSize: 24, fontFamily: fonts.display }}>←</Text>
           </Pressable>
           <View style={{ flexDirection: 'row', flex: 1, borderWidth: 2, borderColor: colors.paper }}>
-            {(['auto', 'puntos'] as Mode[]).map((m) => (
+            {(['ia', 'auto', 'puntos'] as Mode[]).map((m) => (
               <Pressable key={m} accessibilityRole="button" onPress={() => { setMode(m); setPts([]); setMessage(null); }}
                 style={{ flex: 1, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: mode === m ? colors.red : 'rgba(20,20,20,0.75)' }}>
-                <Text style={{ color: colors.paper, fontFamily: fonts.display, fontSize: 15, letterSpacing: 1 }}>{m === 'auto' ? 'AUTO' : 'PUNTOS'}</Text>
+                <Text style={{ color: colors.paper, fontFamily: fonts.display, fontSize: 15, letterSpacing: 1 }}>{m === 'ia' ? 'IA + AR' : m === 'auto' ? 'AUTO' : 'PUNTOS'}</Text>
               </Pressable>
             ))}
           </View>
@@ -372,10 +411,12 @@ function ARMeasure({ purpose }: { purpose?: string }) {
           )}
 
           <View style={{ flexDirection: 'row', gap: space.sm }}>
-            {mode === 'auto'
+            {mode === 'ia'
+              ? <Button label={ai.busy ? 'Analizando…' : 'Medir con IA'} icon="cube-scan" style={{ flex: 1 }} onPress={identify} disabled={!reticle || ai.busy} />
+              : mode === 'auto'
               ? <Button label={selPlane ? 'Reseleccionar' : 'Seleccionar'} icon="gesture-tap" style={{ flex: 1 }} onPress={selectTop} disabled={!reticle} />
               : <Button label={pts.length ? 'Marcar fin' : 'Marcar inicio'} icon="crosshairs-gps" style={{ flex: 1 }} onPress={placePoint} disabled={!reticle} />}
-            {ai.busy
+            {mode === 'ia' ? null : ai.busy
               ? <View accessibilityLabel="La IA está analizando" style={{ minWidth: 64, height: 44, borderWidth: 3, borderColor: colors.paper, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' }}><LoadingDots /></View>
               : <Button label="IA" variant="outline" small onPress={identify} style={{ alignSelf: 'center' }} />}
             <Button label="↺" variant="outline" small onPress={() => { resetAll(); planes.current.clear(); setPlaneTick((n) => n + 1); setResetSignal((n) => n + 1); }} style={{ alignSelf: 'center' }} />

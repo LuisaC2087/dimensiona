@@ -67,7 +67,7 @@ describe('transportadoras', () => {
     assert.equal((await S.call('POST', `/api/shipments/${carrierShip.id}/accept`, { token: M })).status, 400);
     assert.equal((await S.call('POST', `/api/shipments/${carrierShip.id}/pickup`, { token: T, body: { date: '2020-01-01' } })).status, 400);
     const d = new Date(); d.setDate(d.getDate() + (d.getDay() === 6 ? 2 : 1));
-    const p = await S.call('POST', `/api/shipments/${carrierShip.id}/pickup`, { token: T, body: { date: d.toISOString().slice(0, 10), window: 'tarde' } });
+    const p = await S.call('POST', `/api/shipments/${carrierShip.id}/pickup`, { token: T, body: { date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`, window: 'tarde' } });
     assert.equal(p.status, 200);
     assert.match(p.body.id, /^REC-/);
     await new Promise((res) => setTimeout(res, 7000));

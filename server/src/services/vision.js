@@ -15,7 +15,7 @@ La foto viene de la cámara del teléfono de un emprendedor que va a empacar un 
 Ignora líneas, puntos o etiquetas dibujadas por la app sobre la imagen.
 Detecta los productos u objetos que se podrían enviar (máximo 6, primero el más centrado y nítido).
 Para cada uno: nombre corto en español de Colombia, categoría, si es frágil, "box_2d" = [ymin, xmin, ymax, xmax]
-normalizado 0-1000 ajustado al borde visible, y una estimación aproximada de largo, ancho y alto en centímetros
+normalizado 0-1000 ajustado EXACTAMENTE al contorno visible del producto (incluida la tapa o la parte más alta, sin la sombra ni la mesa), y una estimación aproximada de largo, ancho y alto en centímetros
 usando referencias visuales (no inventes precisión). No describas personas ni leas documentos o pantallas.
 Si no hay nada reconocible, devuelve una lista vacía.`;
 
