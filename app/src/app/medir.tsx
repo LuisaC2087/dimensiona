@@ -4,13 +4,15 @@
  *    como plano: largo y ancho salen de su contorno y el alto de la distancia a la superficie de apoyo.
  *  - PUNTOS: marca dos puntos por arista (largo, ancho, alto) con la retícula.
  *  - IA: identifica el producto en la imagen (nombre, categoría, frágil) y da una estimación de respaldo,
- *    que se dibuja en AR como una caja sobre el punto apuntado.
+ *    que se dibuja en AR como una caja sobre el punto apuntado. Además mide por geometría: el recuadro
+ *    que marca la IA se cruza con la mesa (que ARCore sí detecta) para sacar alto y ancho reales, aunque
+ *    el producto sea alto o delgado y la retícula lo atraviese.
  * Solo se mide entre MIN_DISTANCE_M y MAX_DISTANCE_M de la cámara; una guía inicial explica cómo apuntar.
  * Con las tres medidas, la app pide la caja recomendada y la dibuja en AR alrededor del producto.
  */
 import { RequireAuth } from '../components/RoleGate';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, PixelRatio, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../api/client';
@@ -22,7 +24,7 @@ import { LoadingDots } from '../components/motion';
 import { toJpegBase64 } from '../lib/image';
 import { ensureAiConsent } from '../lib/consent';
 import {
-  aiBoxBase, distance3, distanceStatus, heightAboveSupport, MAX_DISTANCE_M, MIN_DISTANCE_M, MIN_SEPARATION_M, normalizeDims, reliability, reliabilityLabel, toCm,
+  aiBoxBase, depthFromAi, distance3, measureFromBox, distanceStatus, heightAboveSupport, MAX_DISTANCE_M, MIN_DISTANCE_M, MIN_SEPARATION_M, normalizeDims, reliability, reliabilityLabel, toCm,
   type Dim, type HPlane, type Point3, type TrackingState,
 } from '../lib/measure';
 import { measureBus } from '../state/measureBus';
@@ -91,6 +93,8 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   const [resetSignal, setResetSignal] = useState(0);
   const [showGuide, setShowGuide] = useState(true);
   const [aiBase, setAiBase] = useState<ReticleHit | null>(null);
+  const [geo, setGeo] = useState<{ base: Point3; lengthM: number; widthM: number; heightM: number } | null>(null);
+  const viewSize = useRef({ w: 0, h: 0 });
   const handle = useRef<ARHandle | null>(null);
   const lastUi = useRef(0);
 
@@ -157,12 +161,14 @@ function ARMeasure({ purpose }: { purpose?: string }) {
     }
     const surfaces = [...planes.current.values()].filter((p) => p.id !== selId).map((p) => ({ id: p.id, outline: p.outline }));
     const est = ai.chosen?.estimado;
-    const aiBox = !product && aiBase && est?.largo && est.ancho && est.alto
+    const aiBox = !product && geo
+      ? { base: geo.base, lengthM: geo.lengthM, widthM: geo.widthM, heightM: geo.heightM, label: `IA+AR ${fmt(toCm(geo.lengthM))}×${fmt(toCm(geo.widthM))}×${fmt(toCm(geo.heightM))} CM` }
+      : !product && aiBase && est?.largo && est.ancho && est.alto
       ? { base: aiBoxBase(aiBase.position, aiBase.cameraPosition, hPlanes, { widthM: est.ancho / 100, heightM: est.alto / 100 }), lengthM: est.largo / 100, widthM: est.ancho / 100, heightM: est.alto / 100, label: `IA ${fmt(est.largo)}×${fmt(est.ancho)}×${fmt(est.alto)} CM` }
       : null;
     return { points: pts, segments, labels, draft, product, ghost, surfaces, aiBox };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pts, segs, reticle, mode, selPlane, hPlanes, ghost, planeTick, selId, ai.chosen, aiBase]);
+  }, [pts, segs, reticle, mode, selPlane, hPlanes, ghost, planeTick, selId, ai.chosen, aiBase, geo]);
 
   const nextMissing = (v: Record<Dim, number | null>, from: Dim): Dim => DIMS.find((d) => v[d] == null && d !== from) ?? from;
 
@@ -211,15 +217,53 @@ function ARMeasure({ purpose }: { purpose?: string }) {
     if (!(await ensureAiConsent())) return;
     setAi((a) => ({ ...a, busy: true, error: null }));
     try {
+      const hitAtCapture = reticle;
       setAiBase(reticle ?? null);
       const uri = await handle.current?.capture();
       if (!uri) throw new Error('No se pudo tomar la imagen de la cámara.');
       const b64 = await toJpegBase64(uri);
       const r = await api.identify(b64);
       setAi({ busy: false, list: r.objetos, chosen: r.objetos[0] ?? null, error: r.objetos.length ? null : 'No reconocí un producto. Acércate y enfoca solo el producto.' });
+      if (r.objetos[0]) await measureWithBox(r.objetos[0], hitAtCapture);
     } catch (e: any) {
       setAi((a) => ({ ...a, busy: false, error: e.message }));
     }
+  };
+
+  /**
+   * Medida por geometría con el recuadro de la IA: la base del recuadro toca la mesa (un punto que ARCore
+   * sí encuentra) y los bordes superior, izquierdo y derecho se leen en el plano del frente del producto.
+   * Las coordenadas de pantalla pueden ir en dp o en píxeles según el dispositivo: se elige la escala cuyo
+   * punto central coincide con la retícula.
+   */
+  const measureWithBox = async (obj: VisionObject, hit: ReticleHit | null) => {
+    const h = handle.current, { w, h: H } = viewSize.current;
+    if (!h || !hit || !w || !H) return;
+    let k = 1, bestErr = Infinity;
+    for (const s of [1, PixelRatio.get()]) {
+      const c = await h.hitTest((w / 2) * s, (H / 2) * s);
+      const err = c ? distance3(c, hit.position) : Infinity;
+      if (err < bestErr) { bestErr = err; k = s; }
+    }
+    const b = obj.caja, px = (fx: number, fy: number) => [fx * w * k, fy * H * k] as const;
+    const base = await h.hitTest(...px(b.x + b.ancho / 2, Math.min(1, b.y + b.alto + 0.01)));
+    if (!base || distanceStatus(distance3(base, hit.cameraPosition)) !== 'ok') return;
+    const [top, left, right] = await Promise.all([
+      h.screenRay(...px(b.x + b.ancho / 2, b.y)),
+      h.screenRay(...px(b.x, b.y + b.alto * 0.97)),
+      h.screenRay(...px(b.x + b.ancho, b.y + b.alto * 0.97)),
+    ]);
+    if (!top || !left || !right) return;
+    const m = measureFromBox(hit.cameraPosition, base, { top, left, right });
+    if (!m) return;
+    const widthCm = toCm(m.widthM)!, heightCm = toCm(m.heightM)!;
+    const depthCm = depthFromAi(widthCm, obj.estimado) ?? widthCm;
+    const dx = base.x - hit.cameraPosition.x, dz = base.z - hit.cameraPosition.z, dl = Math.hypot(dx, dz) || 1;
+    const back = depthCm / 200; // media profundidad, en metros
+    setGeo({ base: { x: base.x + (dx / dl) * back, y: base.y, z: base.z + (dz / dl) * back }, lengthM: depthCm / 100, widthM: widthCm / 100, heightM: heightCm / 100 });
+    setValues({ length: Math.max(widthCm, depthCm), width: Math.min(widthCm, depthCm), height: heightCm });
+    setScores([reliability(tracking, 'plane', distance3(base, hit.cameraPosition)) * 0.85]);
+    setMessage(`Medido con IA + AR: alto ${fmt(heightCm)} cm y ancho ${fmt(widthCm)} cm. Revisa y confirma.`);
   };
 
   const applyAiEstimate = () => {
@@ -230,7 +274,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   };
 
   const resetAll = () => {
-    setAiBase(null); setSelId(null); setValues({ length: null, width: null, height: null }); setScores([]); setPts([]); setSegs([]); setActive('length'); setGhost(null); setMessage(null);
+    setAiBase(null); setGeo(null); setSelId(null); setValues({ length: null, width: null, height: null }); setScores([]); setPts([]); setSegs([]); setActive('length'); setGhost(null); setMessage(null);
   };
 
   const confirm = () => {
@@ -251,7 +295,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
         : `${DIM_LABEL[active]}: ${pts.length === 0 ? 'apunta al primer extremo y marca' : 'apunta al otro extremo y marca'}`);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: '#000' }} onLayout={(e) => { viewSize.current = { w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height }; }}>
       <ARProductView callbacks={callbacks} drawing={drawing} handleRef={handle} resetSignal={resetSignal} />
       {/* Retícula */}
       <View pointerEvents="none" style={{ position: 'absolute', top: '50%', left: '50%', width: 34, height: 34, marginLeft: -17, marginTop: -17, borderWidth: 3, borderColor: reticle ? colors.red : 'rgba(255,255,255,0.7)', transform: [{ rotate: '45deg' }] }} />

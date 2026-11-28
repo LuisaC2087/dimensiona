@@ -152,3 +152,50 @@ export function aiBoxBase(
   }
   return { x, y: support ?? hit.y - dims.heightM / 2, z };
 }
+
+type V3 = { x: number; y: number; z: number };
+const sub3 = (a: V3, b: V3): V3 => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
+
+/**
+ * Corta un rayo con el plano vertical que pasa por `base` y mira a la cámara (normal horizontal).
+ * null si el rayo es paralelo al plano o el corte queda detrás de la cámara.
+ */
+export function rayOnFacingPlane(origin: V3, dir: V3, base: V3, camera: V3): V3 | null {
+  const nx = base.x - camera.x, nz = base.z - camera.z;
+  const nl = Math.hypot(nx, nz);
+  if (nl < 1e-6) return null;
+  const n = { x: nx / nl, z: nz / nl };
+  const denom = dir.x * n.x + dir.z * n.z;
+  if (Math.abs(denom) < 1e-6) return null;
+  const t = ((base.x - origin.x) * n.x + (base.z - origin.z) * n.z) / denom;
+  if (t <= 0) return null;
+  return { x: origin.x + dir.x * t, y: origin.y + dir.y * t, z: origin.z + dir.z * t };
+}
+
+/**
+ * Medida por geometría de objetos altos o delgados, donde la retícula atraviesa el producto.
+ * `base` = punto de la mesa justo en la base del producto (ARCore lo detecta bien); los rayos salen
+ * de la cámara por el borde superior y por los bordes izquierdo y derecho del recuadro que marcó la IA.
+ * El alto y el ancho se leen en el plano vertical del frente del producto.
+ */
+export function measureFromBox(
+  camera: V3, base: V3,
+  rays: { top: { origin: V3; dir: V3 }; left: { origin: V3; dir: V3 }; right: { origin: V3; dir: V3 } },
+): { heightM: number; widthM: number } | null {
+  const top = rayOnFacingPlane(rays.top.origin, rays.top.dir, base, camera);
+  const left = rayOnFacingPlane(rays.left.origin, rays.left.dir, base, camera);
+  const right = rayOnFacingPlane(rays.right.origin, rays.right.dir, base, camera);
+  if (!top || !left || !right) return null;
+  const heightM = top.y - base.y;
+  const widthM = Math.hypot(...Object.values(sub3(right, left)).filter((_, i) => i !== 1));
+  if (!(heightM > 0.005 && heightM < 1.5 && widthM > 0.005 && widthM < 1.5)) return null;
+  return { heightM, widthM };
+}
+
+/** Profundidad (lado que no se ve de frente): la de la IA, corregida por la escala del ancho medido. */
+export function depthFromAi(widthCm: number, ai: { largo: number | null; ancho: number | null }): number | null {
+  const { largo, ancho } = ai;
+  if (!largo || !ancho) return null;
+  const [match, other] = Math.abs(largo - widthCm) <= Math.abs(ancho - widthCm) ? [largo, ancho] : [ancho, largo];
+  return Math.round(other * (widthCm / match) * 10) / 10;
+}

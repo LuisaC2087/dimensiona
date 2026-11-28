@@ -39,4 +39,6 @@ export interface ARDrawing {
 export interface ARHandle {
   capture: () => Promise<string | null>;
   hitTest: (x: number, y: number) => Promise<Point3 | null>;
+  /** Rayo 3D que sale de la cámara por un punto de la pantalla (mismas unidades que hitTest). */
+  screenRay: (x: number, y: number) => Promise<{ origin: Point3; dir: Point3 } | null>;
 }

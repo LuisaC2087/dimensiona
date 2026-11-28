@@ -1,5 +1,5 @@
 import {
-  aiBoxBase, distance3, distanceStatus, heightAboveSupport, MAX_DISTANCE_M, MIN_DISTANCE_M, iso, maxRelativeDiff, median, minAreaRect, normalizeDims, photoMeasureCm, reliability, reliabilityLabel, toCm,
+  aiBoxBase, depthFromAi, measureFromBox, rayOnFacingPlane, distance3, distanceStatus, heightAboveSupport, MAX_DISTANCE_M, MIN_DISTANCE_M, iso, maxRelativeDiff, median, minAreaRect, normalizeDims, photoMeasureCm, reliability, reliabilityLabel, toCm,
 } from '../measure';
 import { cm, dims, eta, money, waNumber } from '../format';
 
@@ -108,5 +108,30 @@ describe('aiBoxBase', () => {
   it('sin superficie de apoyo centra la caja en el punto tocado', () => {
     const b = aiBoxBase({ x: 0, y: 0.88, z: -0.5 }, { x: 0, y: 1.2, z: 0 }, [], { widthM: 0.08, heightM: 0.2 });
     expect(b.y).toBeCloseTo(0.78);
+  });
+});
+
+describe('medida por geometría (IA + mesa)', () => {
+  // Cámara a 1,2 m de altura mirando una botella de 8 cm de ancho y 25 cm de alto apoyada en una mesa (y = 0,75) a 0,5 m.
+  const cam = { x: 0, y: 1.2, z: 0 };
+  const base = { x: 0, y: 0.75, z: -0.5 };
+  const ray = (to: { x: number; y: number; z: number }) => ({ origin: cam, dir: { x: to.x - cam.x, y: to.y - cam.y, z: to.z - cam.z } });
+  it('corta el rayo en el plano vertical del frente del producto', () => {
+    const p = rayOnFacingPlane(cam, { x: 0, y: -0.2, z: -1 }, base, cam)!;
+    expect(p.z).toBeCloseTo(-0.5);
+    expect(p.y).toBeCloseTo(1.1);
+  });
+  it('obtiene alto y ancho a partir del recuadro', () => {
+    const m = measureFromBox(cam, base, { top: ray({ x: 0, y: 1.0, z: -0.5 }), left: ray({ x: -0.04, y: 0.76, z: -0.5 }), right: ray({ x: 0.04, y: 0.76, z: -0.5 }) })!;
+    expect(m.heightM).toBeCloseTo(0.25);
+    expect(m.widthM).toBeCloseTo(0.08);
+  });
+  it('descarta medidas imposibles', () => {
+    expect(measureFromBox(cam, base, { top: ray({ x: 0, y: 0.7, z: -0.5 }), left: ray({ x: -0.04, y: 0.76, z: -0.5 }), right: ray({ x: 0.04, y: 0.76, z: -0.5 }) })).toBeNull();
+  });
+  it('la profundidad sale de la IA, escalada por el ancho medido', () => {
+    expect(depthFromAi(10, { largo: 10, ancho: 8 })).toBe(8);
+    expect(depthFromAi(12, { largo: 10, ancho: 8 })).toBe(9.6);
+    expect(depthFromAi(10, { largo: null, ancho: 8 })).toBeNull();
   });
 });

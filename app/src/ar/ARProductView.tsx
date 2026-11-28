@@ -208,6 +208,21 @@ export function ARProductView(props: { callbacks: ARCallbacks; drawing: ARDrawin
           return best ? p3(best.transform.position) : null;
         } catch { return null; }
       },
+      screenRay: async (x: number, y: number) => {
+        const n = nav.current;
+        const un = n?.arSceneNavigator?.unproject ?? n?._unproject;
+        if (!un) return null;
+        const pos = (r: any): Point3 | null => {
+          const a = r?.position ?? r?.vertex ?? r;
+          return Array.isArray(a) && a.length >= 3 ? p3(a) : null;
+        };
+        try {
+          const near = pos(await un([x, y, 0])), far = pos(await un([x, y, 1]));
+          if (!near || !far) return null;
+          const dir = { x: far.x - near.x, y: far.y - near.y, z: far.z - near.z };
+          return Math.hypot(dir.x, dir.y, dir.z) > 1e-6 ? { origin: near, dir } : null;
+        } catch { return null; }
+      },
   }), []);
   useEffect(() => {
     if (props.resetSignal <= 0) return;
