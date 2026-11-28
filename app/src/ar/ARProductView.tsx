@@ -134,17 +134,20 @@ function Pill({ at, text, ink }: { at: [number, number, number]; text: string; i
 
 /** Caja del producto a partir de la estimación de la IA (y la caja sugerida alrededor). */
 function AiProductBox({ o, ghost }: { o: AiBox; ghost: BoxGhost | null }) {
-  const box = (lm: number, wm: number, hm: number) => {
-    const hl = lm / 2, hw = wm / 2, { x, y, z } = o.base;
-    const base: Point2[] = [{ x: x - hl, z: z - hw }, { x: x + hl, z: z - hw }, { x: x + hl, z: z + hw }, { x: x - hl, z: z + hw }];
+  // u = hacia el fondo (profundidad), w = de lado a lado frente a la cámara (ancho visible)
+  const u = o.facing ?? { x: 0, z: -1 }, w = { x: -u.z, z: u.x };
+  const box = (depthM: number, widthM: number, hm: number) => {
+    const hd = depthM / 2, hw = widthM / 2, { x, y, z } = o.base;
+    const c = (su: number, sw: number): Point2 => ({ x: x + u.x * hd * su + w.x * hw * sw, z: z + u.z * hd * su + w.z * hw * sw });
+    const base: Point2[] = [c(-1, -1), c(-1, 1), c(1, 1), c(1, -1)];
     return [closed(base, y), closed(base, y + hm), ...base.map((p) => [l3(p, y), l3(p, y + hm)])];
   };
   return (
     <>
       {box(o.lengthM, o.widthM, o.heightM).map((pts, i) => <ViroPolyline key={'a' + i} points={pts} thickness={0.005} materials={['dmLine']} />)}
       <Pill at={[o.base.x, o.base.y + o.heightM + 0.025, o.base.z]} text={o.label} ink />
-      {ghost && box(ghost.lengthM, ghost.widthM, ghost.heightM).map((pts, i) => <ViroPolyline key={'ag' + i} points={pts} thickness={0.006} materials={['dmRed']} />)}
-      {ghost && <Pill at={[o.base.x, o.base.y + ghost.heightM + 0.1, o.base.z]} text={ghost.label} />}
+      {ghost && box(Math.min(ghost.lengthM, ghost.widthM), Math.max(ghost.lengthM, ghost.widthM), ghost.heightM).map((pts, i) => <ViroPolyline key={'ag' + i} points={pts} thickness={0.006} materials={['dmRed']} />)}
+      {ghost && <Pill at={[o.base.x, o.base.y + Math.max(ghost.heightM, o.heightM) + 0.075, o.base.z]} text={ghost.label} />}
     </>
   );
 }

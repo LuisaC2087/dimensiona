@@ -23,7 +23,7 @@ export interface ProductOverlay {
 }
 export interface BoxGhost { lengthM: number; widthM: number; heightM: number; label: string }
 /** Producto estimado por la IA, dibujado en AR con su base en el punto apuntado al identificarlo. */
-export interface AiBox { base: Point3; lengthM: number; widthM: number; heightM: number; label: string }
+export interface AiBox { base: Point3; /** dirección cámara → producto (horizontal): la profundidad va a lo largo de ella */ facing?: { x: number; z: number }; lengthM: number; widthM: number; heightM: number; label: string }
 
 export interface ARDrawing {
   points: Point3[];

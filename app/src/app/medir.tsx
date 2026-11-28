@@ -34,6 +34,8 @@ type Mode = 'ia' | 'auto' | 'puntos';
 const DIM_LABEL: Record<Dim, string> = { length: 'Largo', width: 'Ancho', height: 'Alto' };
 const DIMS: Dim[] = ['length', 'width', 'height'];
 const TRACK_COLOR: Record<TrackingState, string> = { good: '#3BB273', limited: '#E0A100', lost: colors.red };
+/** Dirección horizontal de la cámara hacia el producto: las cajas se dibujan de frente a quien mide. */
+const facingOf = (at: Point3, cam: Point3) => { const dx = at.x - cam.x, dz = at.z - cam.z, d = Math.hypot(dx, dz) || 1; return { x: dx / d, z: dz / d }; };
 const CAUSE: Record<string, string> = { motion: 'Mueve el teléfono más despacio', features: 'Apunta a una superficie con textura', light: 'Necesitas más luz', none: '' };
 
 export default function MedirScreen() {
@@ -93,7 +95,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
   const [resetSignal, setResetSignal] = useState(0);
   const [showGuide, setShowGuide] = useState(true);
   const [aiBase, setAiBase] = useState<ReticleHit | null>(null);
-  const [geo, setGeo] = useState<{ base: Point3; lengthM: number; widthM: number; heightM: number } | null>(null);
+  const [geo, setGeo] = useState<{ base: Point3; facing: { x: number; z: number }; lengthM: number; widthM: number; heightM: number } | null>(null);
   const viewSize = useRef({ w: 0, h: 0 });
   const handle = useRef<ARHandle | null>(null);
   const lastUi = useRef(0);
@@ -161,16 +163,18 @@ function ARMeasure({ purpose }: { purpose?: string }) {
         drop: h != null ? { dy: -h, label: `${fmt(toCm(h))} CM` } : null,
       };
     }
-    const surfaces = [...planes.current.values()].filter((p) => p.id !== selId).map((p) => ({ id: p.id, outline: p.outline }));
+    // Las superficies detectadas solo se dibujan mientras se busca dónde medir: con una medida en pantalla, estorban.
+    const measuring = done || !!geo || !!selPlane || pts.length > 0 || segs.length > 0;
+    const surfaces = measuring ? [] : [...planes.current.values()].filter((p) => p.id !== selId).map((p) => ({ id: p.id, outline: p.outline }));
     const est = ai.chosen?.estimado;
     const aiBox = !product && geo
-      ? { base: geo.base, lengthM: geo.lengthM, widthM: geo.widthM, heightM: geo.heightM, label: `IA+AR ${fmt(toCm(geo.lengthM))}×${fmt(toCm(geo.widthM))}×${fmt(toCm(geo.heightM))} CM` }
+      ? { base: geo.base, facing: geo.facing, lengthM: geo.lengthM, widthM: geo.widthM, heightM: geo.heightM, label: `IA+AR ${fmt(toCm(geo.lengthM))}×${fmt(toCm(geo.widthM))}×${fmt(toCm(geo.heightM))} CM` }
       : !product && aiBase && est?.largo && est.ancho && est.alto
-      ? { base: aiBoxBase(aiBase.position, aiBase.cameraPosition, hPlanes, { widthM: est.ancho / 100, heightM: est.alto / 100 }), lengthM: est.largo / 100, widthM: est.ancho / 100, heightM: est.alto / 100, label: `IA ${fmt(est.largo)}×${fmt(est.ancho)}×${fmt(est.alto)} CM` }
+      ? { facing: facingOf(aiBase.position, aiBase.cameraPosition), base: aiBoxBase(aiBase.position, aiBase.cameraPosition, hPlanes, { widthM: est.ancho / 100, heightM: est.alto / 100 }), lengthM: est.largo / 100, widthM: est.ancho / 100, heightM: est.alto / 100, label: `IA ${fmt(est.largo)}×${fmt(est.ancho)}×${fmt(est.alto)} CM` }
       : null;
     return { points: pts, segments, labels, draft, product, ghost, surfaces, aiBox };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pts, segs, reticle, mode, selPlane, hPlanes, ghost, planeTick, selId, ai.chosen, aiBase, geo]);
+  }, [pts, segs, reticle, mode, selPlane, hPlanes, ghost, planeTick, selId, ai.chosen, aiBase, geo, done]);
 
   const nextMissing = (v: Record<Dim, number | null>, from: Dim): Dim => DIMS.find((d) => v[d] == null && d !== from) ?? from;
 
@@ -293,7 +297,7 @@ function ARMeasure({ purpose }: { purpose?: string }) {
     const depthCm = depthFromAi(widthCm, obj.estimado) ?? widthCm;
     const dx = base.x - hit.cameraPosition.x, dz = base.z - hit.cameraPosition.z, dl = Math.hypot(dx, dz) || 1;
     const back = depthCm / 200; // media profundidad, en metros
-    setGeo({ base: { x: base.x + (dx / dl) * back, y: base.y, z: base.z + (dz / dl) * back }, lengthM: depthCm / 100, widthM: widthCm / 100, heightM: heightCm / 100 });
+    setGeo({ facing: { x: dx / dl, z: dz / dl }, base: { x: base.x + (dx / dl) * back, y: base.y, z: base.z + (dz / dl) * back }, lengthM: depthCm / 100, widthM: widthCm / 100, heightM: heightCm / 100 });
     setValues({ length: Math.max(widthCm, depthCm), width: Math.min(widthCm, depthCm), height: heightCm });
     const steady = spread < Math.max(0.01, hM * 0.08);
     setScores([reliability(tracking, 'plane', distance3(base, hit.cameraPosition)) * (steady ? 0.9 : 0.6)]);
